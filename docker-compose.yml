@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # Banco de dados PostgreSQL com TimescaleDB
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: bndmet-postgres
+    environment:
+      POSTGRES_DB: bndmet
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: senha123
+      POSTGRES_HOST_AUTH_METHOD: trust
+      # ✅ ADICIONADO: Configurações de timezone
+      PGTZ: UTC
+      TZ: UTC
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d/
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d bndmet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # ✅ ADICIONADO: Comando para garantir UTC
+    command: >
+      postgres 
+      -c timezone=UTC
+      -c log_timezone=UTC
+
+  # Adminer para gerenciar o banco (interface web)
+  adminer:
+    image: adminer:latest
+    container_name: bndmet-adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    environment:
+      # ✅ ADICIONADO: Timezone UTC para Adminer
+      TZ: UTC
+
+volumes:
+  postgres_data:
+    driver: local
