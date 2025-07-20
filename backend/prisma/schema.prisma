@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Tabela de leituras do sensor
 model LeiturasSensor {
   id        Int      @id @default(autoincrement())
   timestamp DateTime @default(now()) @db.Timestamptz(6)
@@ -67,6 +68,7 @@ model LeiturasSensor {
   @@map("leituras_sensor")
 }
 
+// Tabela de logs do sistema
 model LogsSistema {
   id          Int      @id @default(autoincrement())
   timestamp   DateTime @default(now()) @db.Timestamptz(6)
@@ -79,6 +81,7 @@ model LogsSistema {
   @@map("logs_sistema")
 }
 
+// Tabela de configurações
 model Configuracoes {
   id        Int      @id @default(autoincrement())
   chave     String   @unique @db.VarChar(100)
@@ -89,4 +92,83 @@ model Configuracoes {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("configuracoes")
+}
+
+// ===== TABELAS DE AUTENTICAÇÃO =====
+
+// Tabela de usuários administradores
+model UsuariosAdmin {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nome             String    @db.VarChar(100)
+  email            String    @unique @db.VarChar(255)
+  senhaHash        String    @db.VarChar(255) @map("senha_hash")
+  perfil           String    @default("admin") @db.VarChar(20)
+  ativo            Boolean   @default(true)
+  ultimoLogin      DateTime? @map("ultimo_login") @db.Timestamptz(6)
+  tokenReset       String?   @map("token_reset") @db.VarChar(255)
+  tokenResetExpira DateTime? @map("token_reset_expira") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relacionamentos
+  sessoes    SessoesUsuario[]
+  logsAlertas LogsAlertas[]
+
+  @@map("usuarios_admin")
+}
+
+// Tabela de usuários básicos
+model UsuariosBasicos {
+  id                    String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nome                  String    @db.VarChar(100)
+  email                 String    @unique @db.VarChar(255)
+  telefone              String?   @db.VarChar(20)
+  ativo                 Boolean   @default(true)
+  receberNotificacoes   Boolean   @default(true) @map("receber_notificacoes")
+  tipoNotificacao       String    @default("email,sms") @map("tipo_notificacao") @db.VarChar(50)
+  ultimoAlertaEnviado   DateTime? @map("ultimo_alerta_enviado") @db.Timestamptz(6)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("usuarios_basicos")
+}
+
+// Tabela de sessões de usuário
+model SessoesUsuario {
+  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  usuarioId String    @map("usuario_id") @db.Uuid
+  token     String    @db.VarChar(500)
+  ipAddress String?   @map("ip_address") @db.Inet
+  userAgent String?   @map("user_agent")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  ativo     Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relacionamentos
+  usuario UsuariosAdmin @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("sessoes_usuario")
+}
+
+// Tabela de logs de alertas
+model LogsAlertas {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  usuarioAdminId    String?  @map("usuario_admin_id") @db.Uuid
+  tipoDestinatario  String   @map("tipo_destinatario") @db.VarChar(20)
+  destinatariosIds  String[] @map("destinatarios_ids") @db.Uuid
+  tipoAlerta        String   @map("tipo_alerta") @db.VarChar(50)
+  nivelCriticidade  String   @map("nivel_criticidade") @db.VarChar(20)
+  titulo            String   @db.VarChar(200)
+  mensagem          String
+  canaisEnvio       String   @map("canais_envio") @db.VarChar(100)
+  totalEnviados     Int      @default(0) @map("total_enviados")
+  totalSucesso      Int      @default(0) @map("total_sucesso")
+  totalFalhas       Int      @default(0) @map("total_falhas")
+  detalhesEnvio     Json?    @map("detalhes_envio")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relacionamentos
+  usuarioAdmin UsuariosAdmin? @relation(fields: [usuarioAdminId], references: [id])
+
+  @@map("logs_alertas")
 }

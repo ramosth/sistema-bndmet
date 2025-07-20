@@ -1,6 +1,7 @@
 // ✅ FORÇA UTC ANTES DE QUALQUER COISA
 process.env.TZ = 'UTC';
 
+import './lib/bigint';
 import app from './app';
 import { env } from './config/env';
 import prisma from './config/database';
