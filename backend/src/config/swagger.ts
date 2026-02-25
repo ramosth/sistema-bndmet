@@ -1,4 +1,4 @@
-// src/config/swagger.ts
+// backend/src/config/swagger.ts
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { Application } from 'express';

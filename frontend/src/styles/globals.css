@@ -263,27 +263,58 @@ body {
 .sidebar {
   width: 250px;
   background: var(--white);
+  border-right: 1px solid var(--gray-200);
   height: 100vh;
   position: fixed;
   left: 0;
   top: 0;
-  border-right: 1px solid var(--gray-200);
   z-index: 1000;
+  display: flex;         
+  flex-direction: column;
+}
+
+.sidebar nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar nav::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 2px;
+}
+
+.sidebar nav::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
 }
 
 .main-content {
   margin-left: 250px;
   min-height: 100vh;
+  display: flex;            
+  flex-direction: column;   
+  width: calc(100vw - 250px);
+  box-sizing: border-box;   
 }
 
 .header {
   background: var(--white);
   height: 4rem;
+  min-height: 4rem;
+  max-height: 4rem;
   border-bottom: 1px solid var(--gray-200);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 2rem;
+  flex-shrink: 0;
+  position: sticky;          
+  top: 0;                   
+  z-index: 100;             
+  width: 100%;             
+  box-sizing: border-box;
 }
 
 @media (max-width: 768px) {
@@ -298,6 +329,30 @@ body {
   
   .main-content {
     margin-left: 0;
+    width: 100vw;           
+  }
+  
+  .header {
+    padding: 0 1rem 0 4rem;
+    width: 100%;            
+  }
+}
+
+/* Ajustes para telas muito pequenas */
+@media (max-width: 480px) {
+  .header {
+    padding: 0 0.75rem 0 3.5rem;
+  }
+}
+
+/* Ajustes para telas muito grandes */
+@media (min-width: 1920px) {
+  .header {
+    max-width: none;        
+  }
+  
+  .main-content {
+    width: calc(100vw - 250px);
   }
 }
 

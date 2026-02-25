@@ -1,3 +1,4 @@
+// backend > src > routes > authRoutets.ts
 import { Router } from 'express';
 import { AuthController } from '../controllers/authController';
 import { 
@@ -492,11 +493,11 @@ router.get('/estatisticas-usuarios', AuthController.obterEstatisticasUsuarios);
  *                 example: Detectado risco alto na barragem
  *               nivelCriticidade:
  *                 type: string
- *                 enum: [baixo, medio, alto, critico]
+ *                 enum: [baixo, medio, critico]
  *                 example: alto
  *               tipoDestinatario:
  *                 type: string
- *                 enum: [basicos, admins, todos]
+ *                 enum: [basico, admin, todos]
  *                 example: todos
  *               destinatariosIds:
  *                 type: array

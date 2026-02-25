@@ -1,3 +1,4 @@
+// backend > src > controllers > docsController.ts
 import { Request, Response } from 'express';
 import { sendSuccess } from '../utils/response';
 
@@ -286,7 +287,7 @@ export class DocsController {
               "example": {
                 "titulo": "Alerta de Segurança",
                 "mensagem": "Detectado risco alto na barragem X",
-                "nivelCriticidade": "alto",
+                "nivelCriticidade": "critico",
                 "tipoDestinatario": "todos",
                 "canaisEnvio": ["email", "sms"],
                 "destinatariosIds": ["uuid1", "uuid2"]
@@ -294,8 +295,8 @@ export class DocsController {
               "validation": {
                 "titulo": "5-200 caracteres",
                 "mensagem": "10-1000 caracteres",
-                "nivelCriticidade": "baixo|medio|alto|critico",
-                "tipoDestinatario": "basicos|admins|todos",
+                "nivelCriticidade": "baixo|medio|critico",
+                "tipoDestinatario": "basico|admin|todos",
                 "canaisEnvio": "array com email|sms|push"
               }
             },

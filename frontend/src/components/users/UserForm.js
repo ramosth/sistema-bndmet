@@ -1,5 +1,5 @@
-// Formulário de usuário
-// ============= src/components/users/UserForm.js - ATUALIZADO =============
+// Formulário de usuário - Sem senha para usuários básicos
+// ============= src/components/users/UserForm.js =============
 'use client';
 
 import { useState } from 'react';
@@ -65,12 +65,12 @@ export default function UserForm({ user, userType, onSave, onCancel }) {
         // CRIAÇÃO
         let userData = {
           nome: data.nome,
-          email: data.email,
-          senha: data.senha
+          email: data.email
         };
 
         // Campos específicos por tipo de usuário
         if (isBasicUser) {
+          // USUÁRIO BÁSICO: Sem senha (será gerada automaticamente no backend)
           userData = {
             ...userData,
             telefone: data.telefone,
@@ -79,8 +79,10 @@ export default function UserForm({ user, userType, onSave, onCancel }) {
           };
           await userService.createBasicUser(userData);
         } else {
+          // ADMINISTRADOR: Com senha obrigatória
           userData = {
             ...userData,
+            senha: data.senha,
             perfil: data.perfil
           };
           await userService.createAdminUser(userData);
@@ -99,7 +101,12 @@ export default function UserForm({ user, userType, onSave, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="grid grid-2" style={{ gap: '1rem' }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '1rem',
+        marginBottom: '1rem'
+      }}>
         <Input
           label="Nome Completo"
           required
@@ -135,18 +142,24 @@ export default function UserForm({ user, userType, onSave, onCancel }) {
           label="Telefone"
           placeholder="(11) 99999-9999"
           {...register('telefone', {
-            required: isBasicUser ? 'Telefone é obrigatório' : false,
             pattern: {
-              value: /^\(\d{2}\)\s\d{4,5}-\d{4}$/,
+              value: /^\(\d{2}\)\s?\d{4,5}-?\d{4}$/,
               message: 'Formato: (11) 99999-9999'
             }
           })}
           error={errors.telefone?.message}
+          style={{ marginBottom: '1rem' }}
         />
       )}
 
-      {!isEditing && (
-        <div className="grid grid-2" style={{ gap: '1rem' }}>
+      {/* Campos de senha - APENAS para administradores OU na edição */}
+      {!isEditing && !isBasicUser && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '1rem',
+          marginBottom: '1rem'
+        }}>
           <Input
             label="Senha"
             type="password"
@@ -178,12 +191,28 @@ export default function UserForm({ user, userType, onSave, onCancel }) {
         </div>
       )}
 
-      {/* Campos específicos por tipo */}
+      {/* Campo perfil - só para administradores */}
       {!isBasicUser && userType === 'admin' && isSuperAdmin() && (
-        <div className="form-group">
-          <label className="form-label">Perfil</label>
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            color: 'var(--gray-700)',
+            marginBottom: '0.5rem'
+          }}>
+            Perfil
+          </label>
           <select
-            className="form-input"
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid var(--gray-300)',
+              borderRadius: '0.375rem',
+              fontSize: '0.875rem',
+              backgroundColor: 'white',
+              color: 'var(--gray-900)'
+            }}
             {...register('perfil')}
           >
             <option value="admin">Administrador</option>
@@ -195,7 +224,7 @@ export default function UserForm({ user, userType, onSave, onCancel }) {
       {/* Configurações de notificação - só para usuários básicos */}
       {isBasicUser && (
         <>
-          <div className="form-group">
+          <div style={{ marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <input
                 type="checkbox"
@@ -221,12 +250,19 @@ export default function UserForm({ user, userType, onSave, onCancel }) {
           </div>
 
           {receberNotificacoes && (
-            <div className="form-group">
-              <label className="form-label">Tipo de Notificação</label>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                color: 'var(--gray-700)',
+                marginBottom: '0.5rem'
+              }}>
+                Tipo de Notificação
+              </label>
               <div style={{
                 display: 'flex',
                 gap: '1rem',
-                marginTop: '0.5rem',
                 padding: '0.75rem',
                 backgroundColor: 'var(--gray-50)',
                 borderRadius: '0.375rem',
@@ -238,9 +274,20 @@ export default function UserForm({ user, userType, onSave, onCancel }) {
                     id="email"
                     value="email"
                     {...register('tipoNotificacao')}
-                    style={{ accentColor: 'var(--primary-blue)' }}
+                    style={{
+                      width: '1rem',
+                      height: '1rem',
+                      accentColor: 'var(--primary-blue)'
+                    }}
                   />
-                  <label htmlFor="email" style={{ fontSize: '0.875rem', cursor: 'pointer' }}>
+                  <label 
+                    htmlFor="email"
+                    style={{
+                      fontSize: '0.875rem',
+                      color: 'var(--gray-700)',
+                      cursor: 'pointer'
+                    }}
+                  >
                     Apenas Email
                   </label>
                 </div>
@@ -248,12 +295,23 @@ export default function UserForm({ user, userType, onSave, onCancel }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <input
                     type="radio"
-                    id="email_sms"
+                    id="email-sms"
                     value="email,sms"
                     {...register('tipoNotificacao')}
-                    style={{ accentColor: 'var(--terracotta)' }}
+                    style={{
+                      width: '1rem',
+                      height: '1rem',
+                      accentColor: 'var(--primary-blue)'
+                    }}
                   />
-                  <label htmlFor="email_sms" style={{ fontSize: '0.875rem', cursor: 'pointer' }}>
+                  <label 
+                    htmlFor="email-sms"
+                    style={{
+                      fontSize: '0.875rem',
+                      color: 'var(--gray-700)',
+                      cursor: 'pointer'
+                    }}
+                  >
                     Email + SMS
                   </label>
                 </div>
@@ -263,11 +321,27 @@ export default function UserForm({ user, userType, onSave, onCancel }) {
         </>
       )}
 
+      {/* Mensagem informativa para usuários básicos */}
+      {!isEditing && isBasicUser && (
+        <div style={{
+          padding: '1rem',
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '0.375rem',
+          fontSize: '0.875rem',
+          color: '#1e40af',
+          marginBottom: '1.5rem'
+        }}>
+          <strong>💡 Informação:</strong> Usuários básicos receberão notificações automaticamente do sistema baseado nos alertas de barragem.
+        </div>
+      )}
+
+      {/* Botões de ação */}
       <div style={{
         display: 'flex',
-        gap: '0.5rem',
+        gap: '0.75rem',
         justifyContent: 'flex-end',
-        marginTop: '2rem'
+        marginTop: '1.5rem'
       }}>
         <Button
           type="button"
@@ -284,7 +358,7 @@ export default function UserForm({ user, userType, onSave, onCancel }) {
           loading={loading}
           disabled={loading}
         >
-          {isEditing ? 'Atualizar' : 'Criar'} {isBasicUser ? 'Usuário' : 'Administrador'}
+          {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Criar Usuário')}
         </Button>
       </div>
     </form>

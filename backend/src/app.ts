@@ -1,3 +1,4 @@
+// backend > src > app.ts
 import './lib/bigint'; // Importar PRIMEIRO para configurar BigInt
 import express from 'express';
 import { env } from './config/env';

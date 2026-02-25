@@ -1,4 +1,4 @@
-// src/routes/docsRoutes.ts
+// backend/src/routes/docsRoutes.ts
 import { Router } from 'express';
 import { DocsController } from '../controllers/docsController';
 

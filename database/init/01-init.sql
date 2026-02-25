@@ -1,3 +1,4 @@
+-- backend > init > 01-init.sql
 -- ✅ CONFIGURAR timezone UTC antes de tudo
 SET timezone = 'UTC';
 ALTER DATABASE bndmet SET timezone = 'UTC';
@@ -14,8 +15,8 @@ $$ LANGUAGE plpgsql;
 
 -- Criar tabela principal de leituras
 CREATE TABLE IF NOT EXISTS leituras_sensor (
-    id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMPTZ NOT NULL DEFAULT utc_now(), -- ✅ USANDO função UTC
+    id SERIAL,
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT utc_now(),
     
     -- Dados do sensor local
     umidade_solo DECIMAL(5,2),
@@ -41,7 +42,6 @@ CREATE TABLE IF NOT EXISTS leituras_sensor (
     -- Previsão
     precipitacao_previsao_6h DECIMAL(8,2),
     precipitacao_previsao_24h DECIMAL(8,2),
-    tendencia_tempo VARCHAR(200),
     
     -- Análise de risco
     risco_integrado DECIMAL(5,2),
@@ -49,46 +49,49 @@ CREATE TABLE IF NOT EXISTS leituras_sensor (
     nivel_alerta VARCHAR(20),
     recomendacao TEXT,
     confiabilidade INTEGER,
-    tendencia_piora BOOLEAN,
-    
-    -- Previsões avançadas
-    previsao_umidade_6h DECIMAL(5,2),
-    previsao_umidade_24h DECIMAL(5,2),
-    tempo_ate_critico DECIMAL(8,2),
     
     -- Status do sistema
     status_sistema INTEGER,
     buzzer_ativo BOOLEAN,
     modo_manual BOOLEAN,
     wifi_conectado BOOLEAN,
-    blynk_conectado BOOLEAN,
     
     -- Dados brutos JSON para flexibilidade
     dados_brutos JSONB,
     
     -- Metadados
     created_at TIMESTAMPTZ DEFAULT utc_now(), -- ✅ UTC
-    updated_at TIMESTAMPTZ DEFAULT utc_now()  -- ✅ UTC
+    updated_at TIMESTAMPTZ DEFAULT utc_now(),  -- ✅ UTC
+    PRIMARY KEY (id, timestamp)
 );
 
 -- Converter para hypertable (otimização TimescaleDB)
 SELECT create_hypertable('leituras_sensor', 'timestamp', if_not_exists => TRUE);
 
--- Criar índices para consultas rápidas
+-- Criar índices otimizados para a nova estrutura
 CREATE INDEX IF NOT EXISTS idx_leituras_timestamp ON leituras_sensor (timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_leituras_nivel_alerta ON leituras_sensor (nivel_alerta);
-CREATE INDEX IF NOT EXISTS idx_leituras_risco ON leituras_sensor (risco_integrado);
+CREATE INDEX IF NOT EXISTS idx_leituras_risco_integrado ON leituras_sensor (risco_integrado);
+CREATE INDEX IF NOT EXISTS idx_leituras_indice_risco ON leituras_sensor (indice_risco);
 CREATE INDEX IF NOT EXISTS idx_leituras_sensor_ok ON leituras_sensor (sensor_ok);
+CREATE INDEX IF NOT EXISTS idx_leituras_precipitacao_24h ON leituras_sensor (precipitacao_24h);
+CREATE INDEX IF NOT EXISTS idx_leituras_status_api ON leituras_sensor (status_api_bndmet);
+CREATE INDEX IF NOT EXISTS idx_leituras_qualidade_dados ON leituras_sensor (qualidade_dados_bndmet);
+
+-- Índices compostos para consultas específicas
+CREATE INDEX IF NOT EXISTS idx_leituras_timestamp_nivel ON leituras_sensor (timestamp DESC, nivel_alerta);
+CREATE INDEX IF NOT EXISTS idx_leituras_timestamp_risco ON leituras_sensor (timestamp DESC, risco_integrado);
 
 -- Tabela para logs do sistema
 CREATE TABLE IF NOT EXISTS logs_sistema (
-    id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMPTZ NOT NULL DEFAULT utc_now(), -- ✅ UTC
+    id SERIAL,
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT utc_now(),
     nivel VARCHAR(20) NOT NULL, -- INFO, WARNING, ERROR, CRITICAL
     componente VARCHAR(50), -- SENSOR, BNDMET, CONECTIVIDADE, etc
     mensagem TEXT NOT NULL,
     dados_extras JSONB,
-    created_at TIMESTAMPTZ DEFAULT utc_now() -- ✅ UTC
+    created_at TIMESTAMPTZ DEFAULT utc_now(),
+    PRIMARY KEY (id, timestamp)
 );
 
 -- Converter logs para hypertable
@@ -105,62 +108,80 @@ CREATE TABLE IF NOT EXISTS configuracoes (
     updated_at TIMESTAMPTZ DEFAULT utc_now()  -- ✅ UTC
 );
 
--- Inserir configurações padrão
-INSERT INTO configuracoes (chave, valor, descricao, tipo) VALUES
-('timezone', 'UTC', 'Timezone do sistema', 'string'),
-('umidade_critica', '25.0', 'Nível crítico de umidade (%)', 'number'),
-('umidade_ruptura', '30.0', 'Nível de ruptura (%)', 'number'),
-('intervalo_sensor', '5000', 'Intervalo de leitura do sensor (ms)', 'number'),
-('intervalo_bndmet', '900000', 'Intervalo de consulta BNDMET (ms)', 'number'),
-('sensor_seco', '850', 'Valor ADC para solo seco', 'number'),
-('sensor_umido', '400', 'Valor ADC para solo úmido', 'number'),
-('wifi_ssid', 'Thamires_2G', 'Nome da rede WiFi', 'string'),
-('api_bndmet_key', 'F9prvVKpaQ1qNtQywCN2sily029xgNaq', 'Chave da API BNDMET', 'string'),
-('api_openweather_key', '04b8a531e11670b8099c49e16ba8f676', 'Chave da API OpenWeather', 'string')
-ON CONFLICT (chave) DO NOTHING;
+-- ===== VIEWS ATUALIZADAS =====
 
--- Função para atualizar timestamp automaticamente
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = utc_now(); -- ✅ Usar função UTC
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Trigger para atualizar configurações
-CREATE TRIGGER update_configuracoes_updated_at 
-    BEFORE UPDATE ON configuracoes 
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Views úteis para consultas
+-- View para últimas leituras
 CREATE OR REPLACE VIEW view_ultimas_leituras AS
 SELECT 
     timestamp AT TIME ZONE 'UTC' as timestamp_utc,
     timestamp,
     umidade_solo,
     risco_integrado,
+    indice_risco,
     nivel_alerta,
     precipitacao_24h,
+    precipitacao_7d,
     temperatura,
     sensor_ok,
-    wifi_conectado
+    wifi_conectado,
+    status_api_bndmet,
+    qualidade_dados_bndmet,
+    confiabilidade
 FROM leituras_sensor
 ORDER BY timestamp DESC
 LIMIT 100;
 
+-- View para alertas críticos
 CREATE OR REPLACE VIEW view_alertas_criticos AS
 SELECT 
     timestamp AT TIME ZONE 'UTC' as timestamp_utc,
     timestamp,
     umidade_solo,
     risco_integrado,
+    indice_risco,
     nivel_alerta,
     recomendacao,
-    confiabilidade
+    confiabilidade,
+    precipitacao_24h,
+    status_api_bndmet,
+    qualidade_dados_bndmet
 FROM leituras_sensor
 WHERE nivel_alerta IN ('CRÍTICO', 'ALTO', 'VERMELHO')
 ORDER BY timestamp DESC;
+
+-- View para estatísticas de qualidade
+CREATE OR REPLACE VIEW view_estatisticas_qualidade AS
+SELECT 
+    DATE_TRUNC('hour', timestamp) as hora,
+    COUNT(*) as total_leituras,
+    COUNT(*) FILTER (WHERE sensor_ok = true) as sensor_ok_count,
+    COUNT(*) FILTER (WHERE status_api_bndmet = 'OK') as api_ok_count,
+    AVG(qualidade_dados_bndmet) as qualidade_media,
+    AVG(confiabilidade) as confiabilidade_media,
+    AVG(risco_integrado) as risco_medio
+FROM leituras_sensor
+WHERE timestamp >= NOW() - INTERVAL '24 hours'
+GROUP BY DATE_TRUNC('hour', timestamp)
+ORDER BY hora DESC;
+
+-- Função para atualizar timestamp automaticamente
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = utc_now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_leituras_sensor_updated_at
+    BEFORE UPDATE ON leituras_sensor
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger para atualizar configurações
+CREATE TRIGGER update_configuracoes_updated_at 
+    BEFORE UPDATE ON configuracoes 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ✅ VIEW para monitorar timezone
 CREATE OR REPLACE VIEW view_timezone_info AS
@@ -171,22 +192,89 @@ SELECT
     NOW() as local_now,
     EXTRACT(TIMEZONE FROM NOW()) as offset_seconds;
 
--- Política de retenção de dados (manter 1 ano)
-SELECT add_retention_policy('leituras_sensor', INTERVAL '1 year');
-SELECT add_retention_policy('logs_sistema', INTERVAL '6 months');
+-- ===== POLÍTICAS DE RETENÇÃO =====
+
+-- Manter dados de sensor por 1 ano
+SELECT add_retention_policy('leituras_sensor', INTERVAL '1 year', if_not_exists => TRUE);
+
+-- Manter logs por 6 meses
+SELECT add_retention_policy('logs_sistema', INTERVAL '6 months', if_not_exists => TRUE);
+
+-- ===== DADOS DE TESTE =====
+
+-- Inserir configurações padrão
+INSERT INTO configuracoes (chave, valor, descricao, tipo) VALUES 
+('sistema_nome', 'Monitor de Deslizamentos', 'Nome do sistema', 'string'),
+('alerta_critico_threshold', '80', 'Threshold para alerta crítico (%)', 'number'),
+('intervalo_leitura', '300', 'Intervalo entre leituras (segundos)', 'number'),
+('api_bndmet_url', 'https://api.bndmet.gov.br', 'URL da API BNDMET', 'string'),
+('fator_local_padrao', '1.000', 'Fator de calibração local padrão', 'decimal')
+ON CONFLICT (chave) DO NOTHING;
 
 -- ✅ INSERIR dados de teste COM timezone UTC explícito
 INSERT INTO leituras_sensor (
-    timestamp,
-    umidade_solo, valor_adc, sensor_ok, precipitacao_24h, 
-    temperatura, risco_integrado, nivel_alerta, recomendacao
+    timestamp, umidade_solo, valor_adc, sensor_ok, fator_local,
+    precipitacao_atual, precipitacao_24h, precipitacao_7d, precipitacao_30d,
+    status_api_bndmet, qualidade_dados_bndmet,
+    temperatura, umidade_externa, pressao_atmosferica, velocidade_vento, descricao_tempo,
+    precipitacao_previsao_6h, precipitacao_previsao_24h,
+    risco_integrado, indice_risco, nivel_alerta, recomendacao, confiabilidade,
+    status_sistema, buzzer_ativo, modo_manual, wifi_conectado
 ) VALUES 
-(utc_now(), 15.5, 750, true, 0.0, 22.5, 25.0, 'VERDE', 'Situação normal'),
-(utc_now() - INTERVAL '1 hour', 28.3, 450, true, 12.5, 19.8, 65.0, 'AMARELO', 'Atenção necessária'),
-(utc_now() - INTERVAL '2 hours', 32.1, 380, true, 45.2, 18.2, 85.0, 'VERMELHO', 'Evacuação recomendada');
+(
+    utc_now(), 15.5, 750, true, 1.000,
+    0.0, 0.0, 5.2, 15.8,
+    'OK', 95,
+    22.5, 68.0, 1013.2, 2.1, 'Parcialmente nublado',
+    0.0, 2.5,
+    25.0, 25, 'VERDE', 'Situação normal - sem riscos identificados', 95,
+    1, false, false, true
+),
+(
+    utc_now() - INTERVAL '1 hour', 28.3, 450, true, 1.000,
+    2.5, 12.5, 25.8, 45.2,
+    'OK', 88,
+    19.8, 75.0, 1008.5, 5.8, 'Chuvisco',
+    5.0, 15.0,
+    65.0, 65, 'AMARELO', 'Atenção necessária - monitoramento intensivo', 82,
+    1, false, false, true
+),
+(
+    utc_now() - INTERVAL '2 hours', 32.1, 380, true, 1.000,
+    8.2, 45.2, 78.5, 125.6,
+    'OK', 75,
+    18.2, 82.0, 1005.8, 12.5, 'Chuva moderada',
+    12.0, 25.0,
+    85.0, 85, 'VERMELHO', 'Evacuação recomendada - risco elevado de deslizamento', 78,
+    2, true, false, true
+);
 
--- ✅ VERIFICAR configuração de timezone
+-- Log de sistema inicial
+INSERT INTO logs_sistema (nivel, componente, mensagem, dados_extras)
+VALUES (
+    'INFO',
+    'INIT',
+    'Banco de dados inicializado com nova estrutura',
+    json_build_object(
+        'timestamp', utc_now(),
+        'estrutura', 'leituras_sensor_v2_atualizada',
+        'colunas_principais', array['umidade_solo', 'precipitacao_bndmet', 'risco_integrado', 'indice_risco']
+    )
+);
+
+-- ✅ VERIFICAR configuração final
 SELECT 
-    'Database initialized successfully!' as status,
+    'Database initialized successfully with updated structure!' as status,
     current_setting('timezone') as timezone_config,
-    utc_now() as current_utc_time;
+    utc_now() as current_utc_time,
+    (SELECT COUNT(*) FROM leituras_sensor) as sample_readings_count;
+
+-- Verificar estrutura da tabela
+SELECT 
+    column_name, 
+    data_type, 
+    is_nullable,
+    column_default
+FROM information_schema.columns 
+WHERE table_name = 'leituras_sensor' 
+ORDER BY ordinal_position;

@@ -1,3 +1,4 @@
+// backend > src > types > index.ts
 export interface DadosESP8266 {
   timestamp?: string;
   umidadeSolo?: number;
@@ -17,21 +18,15 @@ export interface DadosESP8266 {
   descricaoTempo?: string;
   precipitacaoPrevisao6h?: number;
   precipitacaoPrevisao24h?: number;
-  tendenciaTempo?: string;
   riscoIntegrado?: number;
   indiceRisco?: number;
   nivelAlerta?: string;
   recomendacao?: string;
   confiabilidade?: number;
-  tendenciaPiora?: boolean;
-  previsaoUmidade6h?: number;
-  previsaoUmidade24h?: number;
-  tempoAteCritico?: number;
   statusSistema?: number;
   buzzerAtivo?: boolean;
   modoManual?: boolean;
   wifiConectado?: boolean;
-  blynkConectado?: boolean;
   dadosBrutos?: any;
 }
 
@@ -57,4 +52,11 @@ export interface LogEntry {
   componente?: string;
   mensagem: string;
   dadosExtras?: any;
+}
+
+export interface ConsultaPeriodo {
+  dataInicio: string;
+  dataFim: string;
+  pagina?: number;
+  limite?: number;
 }

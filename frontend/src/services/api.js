@@ -34,14 +34,12 @@ api.interceptors.request.use((config) => {
 // Interceptor para lidar com respostas de erro
 api.interceptors.response.use(
   (response) => {
-    // Log para debug (apenas em desenvolvimento)
     if (process.env.NODE_ENV === 'development') {
       console.log(`✅ API Response: ${response.config.url}`, response.data);
     }
     return response;
   },
   (error) => {
-    // Log para debug
     if (process.env.NODE_ENV === 'development') {
       console.error(`❌ API Error: ${error.config?.url}`, {
         status: error.response?.status,
@@ -51,10 +49,11 @@ api.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
+      // Apenas limpar tokens, mas não redirecionar
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
     }
+    
     return Promise.reject(error);
   }
 );
@@ -85,7 +84,7 @@ export const authService = {
   },
   
   changePassword: async (senhaAtual, novaSenha) => {
-    const response = await api.put('/auth/alterar-senha', { senhaAtual, novaSenha });
+    const response = await api.put('/auth/alterar-senha', { senhaAtual, novaSenha, confirmarSenha: novaSenha });
     return response.data;
   }
 };
@@ -227,7 +226,7 @@ export const sensorService = {
 
 // Serviços de alertas
 export const alertService = {
-  sendMassAlert: async (alertData) => {
+  enviarAlertaMassa: async (alertData) => {
     console.log('📢 Enviando alerta em massa:', alertData);
     const response = await api.post('/auth/enviar-alerta', alertData);
     return response.data;

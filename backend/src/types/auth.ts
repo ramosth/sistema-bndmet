@@ -1,3 +1,4 @@
+// backend > src > types > auth.ts
 // Tipos para autenticação e usuários
 
 export interface UsuarioAdmin {
@@ -77,8 +78,8 @@ export interface ResetSenhaResponse {
 export interface EnviarAlertaRequest {
   titulo: string;
   mensagem: string;
-  nivelCriticidade: 'baixo' | 'medio' | 'alto' | 'critico';
-  tipoDestinatario: 'basicos' | 'admins' | 'todos';
+  nivelCriticidade: 'baixo' | 'medio' | 'critico';
+  tipoDestinatario: 'basico' | 'admin' | 'todos';
   destinatariosIds?: string[];
   canaisEnvio: string[]; // ['email', 'sms', 'push']
 }

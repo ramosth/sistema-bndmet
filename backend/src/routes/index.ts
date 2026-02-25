@@ -1,3 +1,4 @@
+// backend > src > routes > index.ts
 import { Router } from 'express';
 import sensorRoutes from './sensorRoutes';
 import authRoutes from './authRoutes';

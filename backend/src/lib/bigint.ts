@@ -1,3 +1,4 @@
+// backend > src > lib > bigint.ts
 // Configurar JSON.stringify para lidar com BigInt globalmente
 (BigInt.prototype as any).toJSON = function() {
     return Number(this);

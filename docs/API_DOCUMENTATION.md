@@ -293,7 +293,7 @@ curl -H 'Authorization: Bearer <seu-token>' \
 {
   "titulo": "Alerta de Segurança",                    // obrigatório, 5-200 chars
   "mensagem": "Detectado risco alto na barragem",    // obrigatório, 10-1000 chars
-  "nivelCriticidade": "alto",                         // baixo|medio|alto|critico
+  "nivelCriticidade": "critico",                         // baixo|medio|critico
   "tipoDestinatario": "todos",                        // basicos|admins|todos
   "destinatariosIds": ["uuid1", "uuid2"],            // opcional, IDs específicos
   "canaisEnvio": ["email", "sms"]                     // email|sms|push

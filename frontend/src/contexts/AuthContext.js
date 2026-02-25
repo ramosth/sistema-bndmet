@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error(response.message || 'Erro no login');
       }
     } catch (error) {
-      const message = error.response?.data?.message || error.message || 'Erro ao fazer login';
+      const message = error.response?.data?.error || error.message || 'Erro ao fazer login';
       toast.error(message);
       return { success: false, message };
     }

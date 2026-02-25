@@ -52,14 +52,14 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <div className={`sidebar ${isOpen ? 'open' : ''}`}>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--gray-200)' }}>
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--gray-200)', flexShrink: 0 }}>
           <h1 style={{ 
             fontSize: '1.25rem', 
             fontWeight: '700', 
             color: 'var(--primary-blue)',
             margin: 0 
           }}>
-            BNDMET
+            TCC IPRJ
           </h1>
           <p style={{ 
             fontSize: '0.75rem', 
@@ -70,7 +70,7 @@ export default function Sidebar() {
           </p>
         </div>
 
-        <nav style={{ padding: '1rem 0', flex: 1 }}>
+        <nav style={{ padding: '1rem 0', flex: 1, overflowY: 'auto', scrollbarWidth: 'thin' }}>
           {filteredMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.path;
@@ -111,19 +111,23 @@ export default function Sidebar() {
         <div style={{ 
           padding: '1rem', 
           borderTop: '1px solid var(--gray-200)',
-          marginTop: 'auto'
+          flexShrink: 0,
+          backgroundColor: 'var(--white)'
         }}>
           <div style={{ 
             padding: '0.75rem', 
             backgroundColor: 'var(--gray-50)', 
-            borderRadius: '0.375rem',
-            marginBottom: '1rem'
+            borderRadius: '0.5rem',
+            marginBottom: '0.75rem'
           }}>
             <p style={{ 
               fontSize: '0.875rem', 
-              fontWeight: '500', 
+              fontWeight: '600',
               margin: 0,
-              color: 'var(--gray-800)'
+              color: 'var(--gray-800)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',  
+              textOverflow: 'ellipsis'
             }}>
               {user?.nome}
             </p>
@@ -139,17 +143,20 @@ export default function Sidebar() {
           <button
             onClick={handleLogout}
             style={{
+              width: '100%',
               display: 'flex',
               alignItems: 'center',
-              width: '100%',
+              justifyContent: 'center',
+              gap: '0.5rem',
               padding: '0.75rem',
-              backgroundColor: 'transparent',
-              border: '1px solid var(--gray-300)',
-              borderRadius: '0.375rem',
-              color: 'var(--gray-600)',
+              backgroundColor: 'var(--red-50)',
+              border: '1px solid var(--red-200)',
+              borderRadius: '0.5rem',
+              color: 'var(--red-600)',
+              fontSize: '0.875rem',
+              fontWeight: '500',
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              fontSize: '0.875rem'
+              transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
               e.target.style.backgroundColor = 'var(--red-50)';

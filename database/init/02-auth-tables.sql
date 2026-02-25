@@ -1,3 +1,4 @@
+-- backend > init > 02-auth-table.sql
 -- Log de início
 SELECT 'Iniciando criação das tabelas de autenticação...' as status;
 
@@ -110,7 +111,7 @@ END $$;
 -- Inserir usuário administrador padrão
 -- Senha: admin123 (hash bcrypt)
 INSERT INTO usuarios_admin (nome, email, senha_hash, perfil) VALUES 
-('Administrador Sistema', 'admin@bndmet.com', '$2b$10$rOzJQQjJ9X5qZ8YvQQ9Z0OzJQjJ9X5qZ8YvQQ9Z0OzJQjJ9X5qZ8Yv', 'super_admin')
+('Administrador Sistema', 'admin@bndmet.com', '$2a$10$ClVatGSU.R9nFJzbHBv1N.MMHuPV04mEslmUJSmQFytyXuZxJTHgC', 'super_admin')
 ON CONFLICT (email) DO NOTHING;
 
 -- Inserir alguns usuários básicos de exemplo

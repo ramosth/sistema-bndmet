@@ -1,3 +1,4 @@
+// backend > src > validators > authValidators.ts
 import { body, param } from 'express-validator';
 
 export const validarLogin = [
@@ -153,14 +154,14 @@ export const validarEnviarAlerta = [
   body('nivelCriticidade')
     .notEmpty()
     .withMessage('Nível de criticidade é obrigatório')
-    .isIn(['baixo', 'medio', 'alto', 'critico'])
+    .isIn(['baixo', 'medio', 'critico'])
     .withMessage('Nível de criticidade deve ser: baixo, medio, alto ou critico'),
 
   body('tipoDestinatario')
     .notEmpty()
     .withMessage('Tipo de destinatário é obrigatório')
-    .isIn(['basicos', 'admins', 'todos'])
-    .withMessage('Tipo de destinatário deve ser: basicos, admins ou todos'),
+    .isIn(['basico', 'admin', 'todos'])
+    .withMessage('Tipo de destinatário deve ser: basico, admin ou todos'),
 
   body('canaisEnvio')
     .isArray({ min: 1 })
@@ -177,5 +178,17 @@ export const validarEnviarAlerta = [
   body('destinatariosIds')
     .optional()
     .isArray()
-    .withMessage('destinatariosIds deve ser uma lista de IDs'),
+    .withMessage('destinatariosIds deve ser uma lista de IDs')
+    .custom((value, { req }) => {
+      // Se tipoDestinatario não for 'todos', verificar se destinatariosIds foi fornecido quando necessário
+      const tipo = req.body.tipoDestinatario;
+      if (tipo && tipo !== 'todos' && value && value.length > 0) {
+        // Validar que os IDs não sejam strings vazias
+        const idsValidos = value.filter(id => id && id.trim() !== '');
+        if (idsValidos.length === 0) {
+          throw new Error('destinatariosIds não pode conter IDs vazios');
+        }
+      }
+      return true;
+    }),
 ];

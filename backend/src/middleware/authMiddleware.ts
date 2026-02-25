@@ -1,3 +1,4 @@
+// backend > src > middleware > authMiddleware.ts
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/authService';
 

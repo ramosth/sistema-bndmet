@@ -1,5 +1,5 @@
-// Modal de confirmação de inativação de usuário
-// ============= src/components/users/InactiveUsersModal.js - NOVO =============
+// Modal de usuários inativos
+// ============= src/components/users/InactiveUsersModal.js =============
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -25,13 +25,23 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
   const loadInactiveUsers = async () => {
     setLoading(true);
     try {
+      console.log('🔍 Carregando usuários inativos...');
       const response = await userService.getInactiveUsers({ limite: 50 });
+      console.log('📦 Response usuários inativos:', response);
+      
       if (response.success) {
-        setInactiveUsers(response.data.usuarios || []);
+        // CORREÇÃO: A API retorna os usuários diretamente em response.data (array)
+        const usersData = Array.isArray(response.data) ? response.data : [];
+        console.log('✅ Usuários inativos encontrados:', usersData.length, usersData);
+        setInactiveUsers(usersData);
+      } else {
+        console.error('❌ Erro na resposta da API:', response);
+        setInactiveUsers([]);
       }
     } catch (error) {
-      console.error('Erro ao carregar usuários inativos:', error);
+      console.error('❌ Erro ao carregar usuários inativos:', error);
       toast.error('Erro ao carregar usuários inativos');
+      setInactiveUsers([]);
     } finally {
       setLoading(false);
     }
@@ -40,6 +50,9 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
   const handleReactivate = async (user) => {
     setReactivating(user.id);
     try {
+      console.log('🔄 Reativando usuário:', user.nome);
+      
+      // Determinar tipo de usuário baseado nos campos disponíveis
       const isBasicUser = user.tipo === 'basico' || user.hasOwnProperty('telefone');
       
       if (isBasicUser) {
@@ -58,6 +71,7 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
         onUserReactivated();
       }
     } catch (error) {
+      console.error('❌ Erro ao reativar usuário:', error);
       const message = error.response?.data?.message || 'Erro ao reativar usuário';
       toast.error(message);
     } finally {
@@ -78,7 +92,7 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
 
   const getTypeColor = (user) => {
     const isBasicUser = user.tipo === 'basico' || user.hasOwnProperty('telefone');
-    return isBasicUser ? 'var(--terracotta)' : 'var(--primary-blue)';
+    return isBasicUser ? '#ea580c' : '#2563eb'; // terracotta : blue
   };
 
   return (
@@ -89,12 +103,18 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
       size="large"
     >
       <div>
-        <div className="flex-between mb-4">
+        {/* Header com contador e botão atualizar */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '1.5rem'
+        }}>
           <div style={{
             fontSize: '0.875rem',
             color: 'var(--gray-600)'
           }}>
-            {inactiveUsers.length} usuários inativos encontrados
+            {loading ? 'Carregando...' : `${inactiveUsers.length} usuários inativos encontrados`}
           </div>
           
           <Button
@@ -102,27 +122,56 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
             size="small"
             onClick={loadInactiveUsers}
             loading={loading}
+            disabled={loading}
           >
             <RefreshCw size={14} />
             Atualizar
           </Button>
         </div>
 
+        {/* Conteúdo */}
         {loading ? (
-          <div className="flex-center" style={{ padding: '3rem' }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            padding: '3rem' 
+          }}>
             <LoadingSpinner size="large" />
           </div>
         ) : inactiveUsers.length === 0 ? (
-          <div className="text-center" style={{ padding: '3rem' }}>
-            <UserCheck size={48} color="var(--green-500)" style={{ marginBottom: '1rem' }} />
-            <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--gray-700)' }}>
+          // Estado vazio
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '3rem' 
+          }}>
+            <div style={{
+              width: '4rem',
+              height: '4rem',
+              backgroundColor: '#dcfce7',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1rem auto'
+            }}>
+              <UserCheck size={24} color="#16a34a" />
+            </div>
+            <h3 style={{ 
+              margin: '0 0 0.5rem 0', 
+              color: 'var(--gray-700)' 
+            }}>
               Todos os usuários estão ativos!
             </h3>
-            <p style={{ margin: 0, color: 'var(--gray-500)' }}>
+            <p style={{ 
+              margin: 0, 
+              color: 'var(--gray-500)' 
+            }}>
               Não há usuários desativados no momento.
             </p>
           </div>
         ) : (
+          // Lista de usuários inativos
           <div style={{ 
             maxHeight: '400px', 
             overflowY: 'auto',
@@ -148,8 +197,18 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  <div className="flex-between">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    {/* Informações do usuário */}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '1rem',
+                      flex: 1
+                    }}>
                       {/* Avatar */}
                       <div style={{
                         width: '2.5rem',
@@ -166,8 +225,8 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
                         {user.nome?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
 
-                      {/* Informações */}
-                      <div>
+                      {/* Dados */}
+                      <div style={{ flex: 1 }}>
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -200,7 +259,8 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
                         
                         <div style={{
                           fontSize: '0.875rem',
-                          color: 'var(--gray-600)'
+                          color: 'var(--gray-600)',
+                          marginBottom: '0.25rem'
                         }}>
                           {user.email}
                         </div>
@@ -212,7 +272,7 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.25rem',
-                            marginTop: '0.25rem'
+                            marginBottom: '0.25rem'
                           }}>
                             <Phone size={12} />
                             {user.telefone}
@@ -221,8 +281,7 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
                         
                         <div style={{
                           fontSize: '0.75rem',
-                          color: 'var(--gray-500)',
-                          marginTop: '0.25rem'
+                          color: 'var(--gray-500)'
                         }}>
                           Desativado em: {formatDate(user.updatedAt)}
                         </div>
@@ -237,12 +296,13 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
                       loading={reactivating === user.id}
                       disabled={reactivating === user.id}
                       style={{
-                        color: 'var(--green-600)',
-                        borderColor: 'var(--green-300)'
+                        backgroundColor: '#dcfce7',
+                        borderColor: '#86efac',
+                        color: '#16a34a'
                       }}
                     >
                       <UserCheck size={14} />
-                      Reativar
+                      {reactivating === user.id ? 'Reativando...' : 'Reativar'}
                     </Button>
                   </div>
                 </div>
@@ -251,14 +311,15 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
           </div>
         )}
 
+        {/* Dica informativa */}
         <div style={{
           marginTop: '1.5rem',
           padding: '1rem',
-          backgroundColor: 'var(--blue-50)',
-          border: '1px solid var(--blue-200)',
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
           borderRadius: '0.375rem',
           fontSize: '0.875rem',
-          color: 'var(--blue-700)'
+          color: '#1e40af'
         }}>
           <strong>💡 Dica:</strong> Usuários inativos não podem fazer login no sistema, mas seus dados
           permanecem salvos. Você pode reativá-los a qualquer momento clicando em "Reativar".

@@ -1,3 +1,4 @@
+// backend > src > controllers > authController.ts
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { AuthService } from '../services/authService';
@@ -124,12 +125,12 @@ export class AuthController {
 
       const { email } = req.body;
       const resultado = await AuthService.solicitarResetSenha(email);
-      
-      return sendSuccess(res, 
-        { 
+
+      return sendSuccess(res,
+        {
           token: resultado.token, // Para desenvolvimento - remover em produção
-          expira: resultado.expira 
-        }, 
+          expira: resultado.expira
+        },
         resultado.message
       );
     } catch (error: any) {
@@ -142,7 +143,7 @@ export class AuthController {
   static async validarTokenReset(req: Request, res: Response) {
     try {
       const { token } = req.params;
-      
+
       if (!token) {
         return sendError(res, 'Token é obrigatório', 400);
       }
@@ -209,8 +210,13 @@ export class AuthController {
     try {
       const pagina = parseInt(req.query.pagina as string) || 1;
       const limite = parseInt(req.query.limite as string) || 50;
+      const busca = req.query.busca as string;
 
-      const { usuarios, total } = await AuthService.listarUsuariosBasicos(pagina, limite);
+      const ativo = req.query.ativo !== undefined ? req.query.ativo === 'true' : undefined;
+
+      console.log(`📋 Listando usuários básicos - Página: ${pagina}, Limite: ${limite}, Ativo: ${ativo}, Busca: ${busca}`);
+
+      const { usuarios, total } = await AuthService.listarUsuariosBasicos(pagina, limite, busca, ativo);
 
       return sendPaginated(res, usuarios, pagina, limite, total);
     } catch (error) {
@@ -224,8 +230,13 @@ export class AuthController {
     try {
       const pagina = parseInt(req.query.pagina as string) || 1;
       const limite = parseInt(req.query.limite as string) || 50;
+      const busca = req.query.busca as string;
 
-      const { usuarios, total } = await AuthService.listarUsuariosAdmin(pagina, limite);
+      const ativo = req.query.ativo !== undefined ? req.query.ativo === 'true' : undefined;
+
+      console.log(`📋 Listando administradores - Página: ${pagina}, Limite: ${limite}, Ativo: ${ativo}, Busca: ${busca}`);
+
+      const { usuarios, total } = await AuthService.listarUsuariosAdmin(pagina, limite, busca, ativo);
 
       return sendPaginated(res, usuarios, pagina, limite, total);
     } catch (error) {
@@ -237,13 +248,22 @@ export class AuthController {
   // Enviar alerta em massa
   static async enviarAlertaMassa(req: Request, res: Response) {
     try {
+      console.log('🔍 Payload recebido:', JSON.stringify(req.body, null, 2));
+
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        console.log('❌ Erros de validação:', errors.array());
         return sendError(res, 'Dados inválidos', 400);
       }
 
       const dados = req.body;
       const usuarioAdminId = req.user!.usuarioId;
+
+      console.log('📤 Enviando alerta:', {
+        titulo: dados.titulo,
+        tipoDestinatario: dados.tipoDestinatario,
+        destinatariosIds: dados.destinatariosIds?.length || 0
+      });
 
       const resultado = await AuthService.enviarAlertaMassa(dados, usuarioAdminId);
 
@@ -253,7 +273,7 @@ export class AuthController {
         `Alerta enviado para ${resultado.totalEnviados} destinatários`
       );
     } catch (error: any) {
-      console.error('Erro ao enviar alerta:', error);
+      console.error('❌ Erro ao enviar alerta:', error);
       return sendError(res, error.message || 'Erro interno do servidor', 500);
     }
   }

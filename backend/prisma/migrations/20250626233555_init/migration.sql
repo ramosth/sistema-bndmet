@@ -1,3 +1,4 @@
+-- backend > prisma > migrations > 20250626233555_init > migration.sql
 -- CreateTable
 CREATE TABLE "leituras_sensor" (
     "id" SERIAL NOT NULL,

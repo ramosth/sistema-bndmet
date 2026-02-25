@@ -1,4 +1,4 @@
-// Tabela de usuários
+// Tabela de usuários - Layout Original com Correções
 // ============= src/components/users/UserTable.js =============
 'use client';
 
@@ -23,21 +23,29 @@ export default function UserTable({
   const [loading, setLoading] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(null);
 
+  // Função para determinar se é usuário básico - RENOMEADA para evitar conflito
+  const checkIfBasicUser = (user) => {
+    return user.hasOwnProperty('telefone') && user.hasOwnProperty('receberNotificacoes');
+  };
+
   const handleToggleStatus = async (user) => {
     setTogglingStatus(user.id);
     try {
-      const isBasicUser = isBasicUser(user);
+      const isBasic = checkIfBasicUser(user); // CORREÇÃO: usar função renomeada
       const newStatus = !user.ativo;
       
-      if (isBasicUser) {
+      console.log('🔄 Alterando status:', { user: user.nome, isBasic, newStatus });
+      
+      if (isBasic) {
         await userService.toggleBasicUserStatus(user.id, newStatus);
       } else {
         await userService.toggleAdminUserStatus(user.id, newStatus);
       }
       
-      toast.success(`${isBasicUser ? 'Usuário' : 'Administrador'} ${newStatus ? 'ativado' : 'desativado'} com sucesso!`);
+      toast.success(`${isBasic ? 'Usuário' : 'Administrador'} ${newStatus ? 'ativado' : 'desativado'} com sucesso!`);
       onRefresh();
     } catch (error) {
+      console.error('❌ Erro ao alterar status:', error);
       const message = error.response?.data?.message || 'Erro ao alterar status do usuário';
       toast.error(message);
     } finally {
@@ -53,31 +61,33 @@ export default function UserTable({
   const handleDeleteConfirm = async () => {
     if (!userToDelete) return;
     
+    console.log('🗑️ Iniciando desativação:', userToDelete);
+    
     setLoading(true);
     try {
-      const isBasicUser = isBasicUser(userToDelete);
+      const isBasic = checkIfBasicUser(userToDelete); // CORREÇÃO: usar função renomeada
       
-      if (isBasicUser) {
+      console.log('🔍 Tipo de usuário:', { isBasic, user: userToDelete.nome });
+      
+      if (isBasic) {
+        console.log('📤 Chamando deleteBasicUser...');
         await userService.deleteBasicUser(userToDelete.id);
       } else {
+        console.log('📤 Chamando deleteAdminUser...');
         await userService.deleteAdminUser(userToDelete.id);
       }
       
-      toast.success(`${isBasicUser ? 'Usuário' : 'Administrador'} desativado com sucesso!`);
+      toast.success(`${isBasic ? 'Usuário' : 'Administrador'} desativado com sucesso!`);
       setShowDeleteModal(false);
       setUserToDelete(null);
       onRefresh();
     } catch (error) {
+      console.error('❌ Erro ao desativar usuário:', error);
       const message = error.response?.data?.message || 'Erro ao desativar usuário';
       toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
-
-  // Função para determinar se é usuário básico
-  const isBasicUser = (user) => {
-    return user.hasOwnProperty('telefone') && user.hasOwnProperty('receberNotificacoes');
   };
 
   const getProfileBadge = (perfil) => {
@@ -241,7 +251,7 @@ export default function UserTable({
           </thead>
           <tbody>
             {users.map((user, index) => {
-              const isBasic = isBasicUser(user);
+              const isBasic = checkIfBasicUser(user); // CORREÇÃO: usar função renomeada
               
               return (
                 <tr 
@@ -325,15 +335,14 @@ export default function UserTable({
                           gap: '0.25rem'
                         }}>
                           <span className={`status-badge ${user.receberNotificacoes ? 'status-online' : 'status-offline'}`}>
-                            {user.receberNotificacoes ? 'Ativado' : 'Desativado'}
+                            {user.receberNotificacoes ? 'Ativo' : 'Inativo'}
                           </span>
-                          {user.receberNotificacoes && user.tipoNotificacao && (
-                            <span style={{
+                          {user.tipoNotificacao && user.receberNotificacoes && (
+                            <span style={{ 
                               fontSize: '0.75rem',
-                              color: 'var(--gray-500)',
-                              fontStyle: 'italic'
+                              color: 'var(--gray-500)'
                             }}>
-                              {user.tipoNotificacao.replace(',', ', ')}
+                              ({user.tipoNotificacao})
                             </span>
                           )}
                         </div>
@@ -347,52 +356,40 @@ export default function UserTable({
                       </td>
                       
                       {/* Último Login (só administradores) */}
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        {user.ultimoLogin ? (
-                          <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '0.25rem'
-                          }}>
-                            <span style={{
-                              fontSize: '0.875rem',
-                              color: 'var(--gray-700)'
-                            }}>
-                              {formatDate(user.ultimoLogin)}
-                            </span>
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.25rem',
-                              fontSize: '0.75rem',
-                              color: 'var(--green-600)'
-                            }}>
-                              <Clock size={12} />
-                              Recente
-                            </div>
-                          </div>
-                        ) : (
-                          <span style={{
-                            fontSize: '0.875rem',
-                            color: 'var(--gray-400)',
-                            fontStyle: 'italic'
-                          }}>
-                            Nunca
-                          </span>
-                        )}
+                      <td style={{
+                        padding: '0.75rem',
+                        textAlign: 'center',
+                        fontSize: '0.875rem',
+                        color: 'var(--gray-600)'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem'
+                        }}>
+                          <Clock size={14} color="var(--gray-400)" />
+                          {user.ultimoLogin ? formatDate(user.ultimoLogin) : 'Nunca'}
+                        </div>
                       </td>
                     </>
                   )}
                   
                   {/* Status */}
                   <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                    <span className={`status-badge ${user.ativo ? 'status-online' : 'status-offline'}`}>
+                    <span style={{
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '9999px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      backgroundColor: user.ativo ? '#dcfce7' : '#fef2f2',
+                      color: user.ativo ? '#166534' : '#dc2626'
+                    }}>
                       {user.ativo ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
                   
-                  {/* Data de Criação */}
+                  {/* Criado em */}
                   <td style={{
                     padding: '0.75rem',
                     fontSize: '0.875rem',
@@ -404,48 +401,68 @@ export default function UserTable({
                   {/* Ações */}
                   {canEdit && (
                     <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        {/* Botão Editar */}
                         <Button
                           variant="outline"
                           size="small"
                           onClick={() => onEdit(user)}
-                          style={{ padding: '0.25rem' }}
-                          title="Editar usuário"
+                          style={{
+                            minWidth: 'auto',
+                            padding: '0.375rem',
+                            backgroundColor: '#eff6ff',
+                            borderColor: '#93c5fd',
+                            color: '#2563eb'
+                          }}
                         >
                           <Edit2 size={14} />
                         </Button>
                         
+                        {/* Botão Toggle Status */}
                         <Button
                           variant="outline"
                           size="small"
                           onClick={() => handleToggleStatus(user)}
-                          loading={togglingStatus === user.id}
                           disabled={togglingStatus === user.id}
-                          style={{ 
-                            padding: '0.25rem',
-                            color: user.ativo ? 'var(--red-500)' : 'var(--green-500)',
-                            borderColor: user.ativo ? 'var(--red-300)' : 'var(--green-300)'
+                          style={{
+                            minWidth: 'auto',
+                            padding: '0.375rem',
+                            backgroundColor: user.ativo ? '#fef2f2' : '#dcfce7',
+                            borderColor: user.ativo ? '#fca5a5' : '#86efac',
+                            color: user.ativo ? '#dc2626' : '#16a34a',
+                            opacity: togglingStatus === user.id ? 0.6 : 1,
+                            cursor: togglingStatus === user.id ? 'not-allowed' : 'pointer'
                           }}
-                          title={user.ativo ? 'Desativar usuário' : 'Ativar usuário'}
                         >
-                          {user.ativo ? <EyeOff size={14} /> : <Eye size={14} />}
+                          {togglingStatus === user.id ? (
+                            <Clock size={14} />
+                          ) : user.ativo ? (
+                            <EyeOff size={14} />
+                          ) : (
+                            <Eye size={14} />
+                          )}
                         </Button>
-
-                        {user.ativo && (
-                          <Button
-                            variant="outline"
-                            size="small"
-                            onClick={() => handleDeleteClick(user)}
-                            style={{ 
-                              padding: '0.25rem',
-                              color: 'var(--red-500)',
-                              borderColor: 'var(--red-300)'
-                            }}
-                            title="Desativar usuário permanentemente"
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        )}
+                        
+                        {/* Botão Deletar */}
+                        <Button
+                          variant="outline"
+                          size="small"
+                          onClick={() => handleDeleteClick(user)}
+                          style={{
+                            minWidth: 'auto',
+                            padding: '0.375rem',
+                            backgroundColor: '#fef2f2',
+                            borderColor: '#fca5a5',
+                            color: '#dc2626'
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
                       </div>
                     </td>
                   )}
@@ -457,34 +474,47 @@ export default function UserTable({
       </div>
 
       {/* Paginação */}
-      {pagination.totalPages > 1 && (
-        <div className="flex-between" style={{ marginTop: '1.5rem', padding: '1rem 0' }}>
-          <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)' }}>
-            Mostrando {((pagination.page - 1) * pagination.limit) + 1} a{' '}
-            {Math.min(pagination.page * pagination.limit, pagination.total)} de{' '}
-            {pagination.total} usuários
+      {pagination && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: '1.5rem',
+          padding: '1rem 0',
+          borderTop: '1px solid var(--gray-200)'
+        }}>
+          <div style={{
+            fontSize: '0.875rem',
+            color: 'var(--gray-600)'
+          }}>
+            Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} usuários
           </div>
           
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
             <Button
               variant="outline"
               size="small"
-              onClick={pagination.prevPage}
-              disabled={!pagination.hasPrevPage}
+              onClick={() => pagination.goToPage(pagination.page - 1)}
+              disabled={pagination.page <= 1}
             >
               <ChevronLeft size={16} />
               Anterior
             </Button>
             
+            {/* Números de página */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '0.25rem',
               margin: '0 0.5rem'
             }}>
-              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                const pageNum = Math.max(1, pagination.page - 2) + i;
-                if (pageNum > pagination.totalPages) return null;
+              {Array.from({ length: Math.min(5, Math.ceil(pagination.total / pagination.limit)) }, (_, i) => {
+                const pageNum = pagination.page - 2 + i;
+                if (pageNum < 1 || pageNum > Math.ceil(pagination.total / pagination.limit)) return null;
                 
                 const isActive = pageNum === pagination.page;
                 
@@ -524,10 +554,10 @@ export default function UserTable({
             <Button
               variant="outline"
               size="small"
-              onClick={pagination.nextPage}
-              disabled={!pagination.hasNextPage}
+              onClick={() => pagination.goToPage(pagination.page + 1)}
+              disabled={pagination.page >= Math.ceil(pagination.total / pagination.limit)}
             >
-              Próximo
+              Próxima
               <ChevronRight size={16} />
             </Button>
           </div>
