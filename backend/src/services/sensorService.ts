@@ -21,41 +21,61 @@ export class SensorService {
 
       const novaLeitura = await prisma.leiturasSensor.create({
         data: {
-          // Dados do sensor local
-          timestamp: dados.timestamp ? new Date(dados.timestamp) : undefined,
-          umidadeSolo: dados.umidadeSolo,
-          valorAdc: dados.valorAdc,
-          sensorOk: dados.sensorOk,
-          fatorLocal: dados.fatorLocal,
-          // Dados BNDMET
-          precipitacaoAtual: dados.precipitacaoAtual,
-          precipitacao24h: dados.precipitacao24h,
-          precipitacao7d: dados.precipitacao7d,
-          precipitacao30d: dados.precipitacao30d,
-          statusApiBndmet: dados.statusApiBndmet,
-          qualidadeDadosBndmet: dados.qualidadeDadosBndmet,
-          // Dados meteorológicos
-          temperatura: dados.temperatura,
-          umidadeExterna: dados.umidadeExterna,
-          pressaoAtmosferica: dados.pressaoAtmosferica,
-          velocidadeVento: dados.velocidadeVento,
-          descricaoTempo: dados.descricaoTempo,
-          // Previsões
-          precipitacaoPrevisao6h: dados.precipitacaoPrevisao6h,
-          precipitacaoPrevisao24h: dados.precipitacaoPrevisao24h,
+          // Sensor local
+          timestamp:              dados.timestamp ? new Date(dados.timestamp) : undefined,
+          umidadeSolo:            dados.umidadeSolo,
+          valorAdc:               dados.valorAdc,
+          sensorOk:               dados.sensorOk,
+          fatorLocal:             dados.fatorLocal,
+
+          // BNDMET
+          precipitacaoAtual:      dados.precipitacaoAtual,
+          precipitacao24h:        dados.precipitacao24h,
+          precipitacao7d:         dados.precipitacao7d,
+          precipitacao30d:        dados.precipitacao30d,
+          statusApiBndmet:        dados.statusApiBndmet,
+          qualidadeDadosBndmet:   dados.qualidadeDadosBndmet,
+          estacao:                dados.estacao,
+
+          // Meteorologia OWM
+          temperatura:            dados.temperatura,
+          umidadeExterna:         dados.umidadeExterna,
+          pressaoAtmosferica:     dados.pressaoAtmosferica,
+          velocidadeVento:        dados.velocidadeVento,
+          descricaoTempo:         dados.descricaoTempo,
+          chuvaAtualOWM:          dados.chuvaAtualOWM,
+
+          // Previsão OWM /forecast
+          chuvaFutura24h:         dados.chuvaFutura24h,
+          intensidadePrevisao:    dados.intensidadePrevisao,
+          fatorIntensidade:       dados.fatorIntensidade,
+
           // Análise de risco
-          riscoIntegrado: dados.riscoIntegrado,
-          indiceRisco: dados.indiceRisco,
-          nivelAlerta: dados.nivelAlerta,
-          recomendacao: dados.recomendacao,
-          confiabilidade: dados.confiabilidade,
+          riscoIntegrado:         dados.riscoIntegrado,
+          indiceRisco:            dados.indiceRisco,
+          nivelAlerta:            dados.nivelAlerta,
+          recomendacao:           dados.recomendacao,
+          confiabilidade:         dados.confiabilidade,
+          amplificado:            dados.amplificado,
+          taxaVariacaoUmidade:    dados.taxaVariacaoUmidade,
+
+          // Componentes individuais da Equação 5 TCC
+          vLencol:                dados.vLencol,
+          vChuvaAtual:            dados.vChuvaAtual,
+          vChuvaHistorica:        dados.vChuvaHistorica,
+          vChuvaMensal:           dados.vChuvaMensal,
+          vChuvaFutura:           dados.vChuvaFutura,
+          vTaxaVariacao:          dados.vTaxaVariacao,
+          vPressao:               dados.vPressao,
+
           // Status do sistema
-          statusSistema: dados.statusSistema,
-          buzzerAtivo: dados.buzzerAtivo,
-          modoManual: dados.modoManual,
-          wifiConectado: dados.wifiConectado,
+          statusSistema:          dados.statusSistema,
+          buzzerAtivo:            dados.buzzerAtivo,
+          modoManual:             dados.modoManual,
+          wifiConectado:          dados.wifiConectado,
+
           // Dados brutos
-          dadosBrutos: dados.dadosBrutos,
+          dadosBrutos:            dados.dadosBrutos,
         },
       });
 
@@ -82,10 +102,12 @@ export class SensorService {
         componente: 'SENSOR',
         mensagem: mensagemLog,
         dadosExtras: {
-          leituraId: novaLeitura.id,
-          risco: dados.riscoIntegrado,
-          nivel: dados.nivelAlerta,
-          statusBndmet: dados.statusApiBndmet
+          leituraId:    novaLeitura.id,
+          risco:        dados.riscoIntegrado,
+          nivel:        dados.nivelAlerta,
+          amplificado:  dados.amplificado,
+          statusBndmet: dados.statusApiBndmet,
+          estacao:      dados.estacao,
         },
       });
 
@@ -93,7 +115,6 @@ export class SensorService {
     } catch (error) {
       console.error('Erro ao salvar dados do sensor:', error);
 
-      // Log do erro
       await this.salvarLog({
         nivel: 'ERROR',
         componente: 'SENSOR',
@@ -128,29 +149,18 @@ export class SensorService {
     try {
       const skip = (pagina - 1) * limite;
 
-      // Garantir que as datas sejam tratadas como UTC
       const inicioUTC = new Date(dataInicio.toISOString());
       const fimUTC = new Date(dataFim.toISOString());
 
       const [leituras, total] = await Promise.all([
         prisma.leiturasSensor.findMany({
-          where: {
-            timestamp: {
-              gte: inicioUTC,
-              lte: fimUTC,
-            },
-          },
+          where: { timestamp: { gte: inicioUTC, lte: fimUTC } },
           orderBy: { timestamp: 'desc' },
           skip,
           take: limite,
         }),
         prisma.leiturasSensor.count({
-          where: {
-            timestamp: {
-              gte: inicioUTC,
-              lte: fimUTC,
-            },
-          },
+          where: { timestamp: { gte: inicioUTC, lte: fimUTC } },
         }),
       ]);
 
@@ -161,7 +171,7 @@ export class SensorService {
     }
   }
 
-  // Buscar leituras por período no timezone
+  // Buscar leituras por período no timezone brasileiro
   static async buscarLeiturasPorPeriodoTimezone(
     dataInicio: string,
     dataFim: string,
@@ -171,9 +181,8 @@ export class SensorService {
     try {
       const skip = (pagina - 1) * limite;
 
-      // Converter datas para formato brasileiro (apenas data, sem hora)
-      const dataInicioStr = dataInicio.split('T')[0]; // '2025-07-27'
-      const dataFimStr = dataFim.split('T')[0];       // '2025-07-27'
+      const dataInicioStr = dataInicio.split('T')[0];
+      const dataFimStr    = dataFim.split('T')[0];
 
       console.log('Buscando registros por data brasileira:', {
         dataInicio: dataInicioStr,
@@ -182,31 +191,22 @@ export class SensorService {
         limite
       });
 
-      // Buscar IDs dos registros que atendem ao critério de data brasileira
       const idsResult = await prisma.$queryRaw`
-      SELECT id FROM leituras_sensor 
-      WHERE (timestamp AT TIME ZONE 'America/Sao_Paulo')::date 
-      BETWEEN ${dataInicioStr}::date AND ${dataFimStr}::date
-      ORDER BY timestamp DESC
-    `;
+        SELECT id FROM leituras_sensor
+        WHERE (timestamp AT TIME ZONE 'America/Sao_Paulo')::date
+        BETWEEN ${dataInicioStr}::date AND ${dataFimStr}::date
+        ORDER BY timestamp DESC
+      `;
 
-      const ids = (idsResult as any[]).map(row => row.id);
+      const ids   = (idsResult as any[]).map(row => row.id);
       const total = ids.length;
 
-      // Se não há registros, retornar vazio
-      if (total === 0) {
-        return { leituras: [], total: 0 };
-      }
+      if (total === 0) return { leituras: [], total: 0 };
 
-      // Buscar registros paginados usando Prisma (dados estruturados)
       const idsPaginados = ids.slice(skip, skip + limite);
 
       const leituras = await prisma.leiturasSensor.findMany({
-        where: {
-          id: {
-            in: idsPaginados,
-          },
-        },
+        where: { id: { in: idsPaginados } },
         orderBy: { timestamp: 'desc' },
       });
 
@@ -226,17 +226,9 @@ export class SensorService {
   // Buscar alertas críticos
   static async buscarAlertas(limite: number = 50, nivelAlerta?: string) {
     try {
-      let where: any = {};
-
-      if (nivelAlerta) {
-        // Se foi passado parâmetro específico
-        where.nivelAlerta = nivelAlerta;
-      } else {
-        // Se não foi passado, buscar VERMELHO e AMARELO
-        where.nivelAlerta = {
-          in: ['VERMELHO', 'AMARELO'],
-        };
-      }
+      const where: any = nivelAlerta
+        ? { nivelAlerta }
+        : { nivelAlerta: { in: ['VERMELHO', 'AMARELO'] } };
 
       return await prisma.leiturasSensor.findMany({
         where,
@@ -252,68 +244,50 @@ export class SensorService {
   // Estatísticas gerais
   static async obterEstatisticas() {
     try {
-      const [
-        totalLeituras,
-        ultimaLeitura,
-        estatisticas24h,
-        alertasCriticos,
-        statusBndmet
-      ] = await Promise.all([
-        prisma.leiturasSensor.count(),
+      const [totalLeituras, ultimaLeitura, estatisticas24h, alertasCriticos, statusBndmet] =
+        await Promise.all([
+          prisma.leiturasSensor.count(),
 
-        prisma.leiturasSensor.findFirst({
-          orderBy: { timestamp: 'desc' },
-        }),
+          prisma.leiturasSensor.findFirst({
+            orderBy: { timestamp: 'desc' },
+          }),
 
-        prisma.leiturasSensor.aggregate({
-          where: {
-            timestamp: {
-              gte: this.getUTCPeriod(24), // Últimas 24h em UTC
+          prisma.leiturasSensor.aggregate({
+            where: { timestamp: { gte: this.getUTCPeriod(24) } },
+            _avg: {
+              umidadeSolo:    true,
+              riscoIntegrado: true,
+              indiceRisco:    true,
+              precipitacao24h: true,
+              temperatura:    true,
             },
-          },
-          _avg: {
-            umidadeSolo: true,
-            riscoIntegrado: true,
-            indiceRisco: true,
-            precipitacao24h: true,
-            temperatura: true,
-          },
-          _count: true,
-        }),
+            _count: true,
+          }),
 
-        prisma.leiturasSensor.count({
-          where: {
-            nivelAlerta: {
-              in: ['CRÍTICO', 'ALTO', 'VERMELHO'],
+          prisma.leiturasSensor.count({
+            where: {
+              nivelAlerta: { in: ['CRÍTICO', 'ALTO', 'VERMELHO'] },
+              timestamp:   { gte: this.getUTCPeriod(24) },
             },
-            timestamp: {
-              gte: this.getUTCPeriod(24),
-            },
-          },
-        }),
+          }),
 
-        // Status da API BNDMET
-        prisma.leiturasSensor.groupBy({
-          by: ['statusApiBndmet'],
-          where: {
-            timestamp: {
-              gte: this.getUTCPeriod(1), // Última hora
-            },
-          },
-          _count: true,
-        })
-      ]);
+          prisma.leiturasSensor.groupBy({
+            by: ['statusApiBndmet'],
+            where: { timestamp: { gte: this.getUTCPeriod(1) } },
+            _count: true,
+          }),
+        ]);
 
       return {
         totalLeituras,
         ultimaLeitura,
         estatisticas24h: {
-          mediaUmidade: estatisticas24h._avg.umidadeSolo,
-          mediaRisco: estatisticas24h._avg.riscoIntegrado,
-          mediaIndiceRisco: estatisticas24h._avg.indiceRisco,
+          mediaUmidade:      estatisticas24h._avg.umidadeSolo,
+          mediaRisco:        estatisticas24h._avg.riscoIntegrado,
+          mediaIndiceRisco:  estatisticas24h._avg.indiceRisco,
           mediaPrecipitacao: estatisticas24h._avg.precipitacao24h,
-          mediaTemperatura: estatisticas24h._avg.temperatura,
-          totalLeituras: estatisticas24h._count,
+          mediaTemperatura:  estatisticas24h._avg.temperatura,
+          totalLeituras:     estatisticas24h._count,
           alertasCriticos,
         },
         statusBndmet,
@@ -329,9 +303,9 @@ export class SensorService {
     try {
       return await prisma.logsSistema.create({
         data: {
-          nivel: log.nivel,
-          componente: log.componente,
-          mensagem: log.mensagem,
+          nivel:       log.nivel,
+          componente:  log.componente,
+          mensagem:    log.mensagem,
           dadosExtras: log.dadosExtras,
         },
       });
@@ -341,15 +315,10 @@ export class SensorService {
   }
 
   // Buscar logs
-  static async buscarLogs(
-    nivel?: string,
-    componente?: string,
-    limite: number = 100
-  ) {
+  static async buscarLogs(nivel?: string, componente?: string, limite: number = 100) {
     try {
       const where: any = {};
-
-      if (nivel) where.nivel = nivel;
+      if (nivel)      where.nivel      = nivel;
       if (componente) where.componente = componente;
 
       return await prisma.logsSistema.findMany({
@@ -364,24 +333,23 @@ export class SensorService {
   }
 
   // Buscar dados para análise de tendências
-  static async buscarDadosTendencia(periodo: number = 168) { // 7 dias por padrão
+  static async buscarDadosTendencia(periodo: number = 168) {
     try {
       return await prisma.leiturasSensor.findMany({
-        where: {
-          timestamp: {
-            gte: this.getUTCPeriod(periodo),
-          },
-        },
+        where: { timestamp: { gte: this.getUTCPeriod(periodo) } },
         select: {
-          timestamp: true,
-          umidadeSolo: true,
-          precipitacao24h: true,
-          precipitacao7d: true,
-          riscoIntegrado: true,
-          indiceRisco: true,
-          nivelAlerta: true,
-          temperatura: true,
+          timestamp:          true,
+          umidadeSolo:        true,
+          precipitacao24h:    true,
+          precipitacao7d:     true,
+          riscoIntegrado:     true,
+          indiceRisco:        true,
+          nivelAlerta:        true,
+          temperatura:        true,
           pressaoAtmosferica: true,
+          amplificado:        true,
+          chuvaFutura24h:     true,
+          intensidadePrevisao: true,
         },
         orderBy: { timestamp: 'asc' },
       });
@@ -397,11 +365,12 @@ export class SensorService {
       const ultimaLeitura = await prisma.leiturasSensor.findFirst({
         orderBy: { timestamp: 'desc' },
         select: {
-          timestamp: true,
-          wifiConectado: true,
-          statusApiBndmet: true,
-          sensorOk: true,
+          timestamp:            true,
+          wifiConectado:        true,
+          statusApiBndmet:      true,
+          sensorOk:             true,
           qualidadeDadosBndmet: true,
+          estacao:              true,
         },
       });
 
@@ -420,13 +389,14 @@ export class SensorService {
       );
 
       return {
-        status: minutosAtras < 10 ? 'online' : 'offline',
-        ultimaLeitura: ultimaLeitura.timestamp,
+        status:               minutosAtras < 10 ? 'online' : 'offline',
+        ultimaLeitura:        ultimaLeitura.timestamp,
         minutosUltimaLeitura: minutosAtras,
-        wifi: ultimaLeitura.wifiConectado,
-        bndmet: ultimaLeitura.statusApiBndmet,
-        sensor: ultimaLeitura.sensorOk,
-        qualidadeBndmet: ultimaLeitura.qualidadeDadosBndmet,
+        wifi:                 ultimaLeitura.wifiConectado,
+        bndmet:               ultimaLeitura.statusApiBndmet,
+        sensor:               ultimaLeitura.sensorOk,
+        qualidadeBndmet:      ultimaLeitura.qualidadeDadosBndmet,
+        estacao:              ultimaLeitura.estacao,
       };
     } catch (error) {
       console.error('❌ Erro ao verificar conectividade:', error);
@@ -438,45 +408,37 @@ export class SensorService {
   static async analisarQualidadeDados(periodo: number = 24) {
     try {
       const resultado = await prisma.leiturasSensor.aggregate({
-        where: {
-          timestamp: {
-            gte: this.getUTCPeriod(periodo),
-          },
-        },
+        where: { timestamp: { gte: this.getUTCPeriod(periodo) } },
         _avg: {
           qualidadeDadosBndmet: true,
-          confiabilidade: true,
+          confiabilidade:       true,
         },
         _count: {
-          sensorOk: true,
+          sensorOk:       true,
           statusApiBndmet: true,
         },
       });
 
       const sensorOkCount = await prisma.leiturasSensor.count({
         where: {
-          timestamp: {
-            gte: this.getUTCPeriod(periodo),
-          },
-          sensorOk: true,
+          timestamp: { gte: this.getUTCPeriod(periodo) },
+          sensorOk:  true,
         },
       });
 
       const apiBndmetOkCount = await prisma.leiturasSensor.count({
         where: {
-          timestamp: {
-            gte: this.getUTCPeriod(periodo),
-          },
+          timestamp:       { gte: this.getUTCPeriod(periodo) },
           statusApiBndmet: 'OK',
         },
       });
 
       return {
-        qualidadeMediaBndmet: resultado._avg.qualidadeDadosBndmet,
-        confiabilidadeMedia: resultado._avg.confiabilidade,
-        percentualSensorOk: (sensorOkCount / resultado._count.sensorOk) * 100,
-        percentualApiBndmetOk: (apiBndmetOkCount / resultado._count.statusApiBndmet) * 100,
-        totalLeituras: resultado._count.sensorOk,
+        qualidadeMediaBndmet:    resultado._avg.qualidadeDadosBndmet,
+        confiabilidadeMedia:     resultado._avg.confiabilidade,
+        percentualSensorOk:      (sensorOkCount / resultado._count.sensorOk) * 100,
+        percentualApiBndmetOk:   (apiBndmetOkCount / resultado._count.statusApiBndmet) * 100,
+        totalLeituras:           resultado._count.sensorOk,
       };
     } catch (error) {
       console.error('❌ Erro ao analisar qualidade dos dados:', error);

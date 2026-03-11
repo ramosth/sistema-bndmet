@@ -42,7 +42,7 @@ async function startServer() {
     console.log(`📧 Status do email: ${emailOk ? '✅ SMTP Conectado' : '⚠️ Modo Simulação'}`);
 
     // Iniciar servidor
-    app.listen(env.PORT, () => {
+    app.listen(Number(env.PORT), '0.0.0.0', () => {
       console.log(`🚀 Servidor rodando na porta ${env.PORT}`);
       console.log(`📊 Ambiente: ${env.NODE_ENV}`);
       console.log(`🌐 URL local: http://localhost:${env.PORT}`);

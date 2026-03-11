@@ -33,7 +33,7 @@ const router = Router();
  *                           example: API Monitoramento de Barragem integrado com API do BNDMET
  *                         version:
  *                           type: string
- *                           example: 2.0.0
+ *                           example: 3.0.0
  *                         baseUrl:
  *                           type: string
  *                           example: http://localhost:3001/api

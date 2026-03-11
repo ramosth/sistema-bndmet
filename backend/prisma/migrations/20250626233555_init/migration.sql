@@ -1,4 +1,6 @@
 -- backend > prisma > migrations > 20250626233555_init > migration.sql
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- CreateTable
 CREATE TABLE "leituras_sensor" (
     "id" SERIAL NOT NULL,

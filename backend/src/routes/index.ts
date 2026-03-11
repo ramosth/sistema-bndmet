@@ -15,7 +15,7 @@ router.get('/', (req, res) => {
   
   res.json({
     message: 'API Monitoramento de Barragem integrado com API do BNDMET',
-    version: '2.0.0',
+    version: '3.0.0',
     timestamp: new Date().toISOString(),
     status: 'online',
     documentation: {
@@ -37,7 +37,7 @@ router.get('/', (req, res) => {
       sensor: {
         base: '/api/sensor',
         public: ['dados', 'status'],
-        admin: ['ultimas', 'periodo', 'alertas', 'estatisticas', 'logs']
+        admin: ['ultimas', 'periodo', 'alertas', 'estatisticas', 'qualidade', 'logs']
       },
       system: {
         base: '/api',
@@ -63,7 +63,7 @@ router.get('/', (req, res) => {
     quick_start: {
       "1_login": `curl -X POST ${baseUrl}/auth/login -H 'Content-Type: application/json' -d '{"email":"admin@bndmet.com","senha":"admin123"}'`,
       "2_get_profile": `curl -H 'Authorization: Bearer <token>' ${baseUrl}/auth/perfil`,
-      "3_send_sensor_data": `curl -X POST ${baseUrl}/sensor/dados -H 'Content-Type: application/json' -d '{"umidadeSolo":25.5,"temperatura":22.3}'`,
+      "3_send_sensor_data": `curl -X POST ${baseUrl}/sensor/dados -H 'Content-Type: application/json' -d '{"umidadeSolo":18.5,"fatorLocal":0.740,"chuvaFutura24h":18.0,"intensidadePrevisao":"Moderada","fatorIntensidade":0.25,"riscoIntegrado":0.62,"indiceRisco":62,"nivelAlerta":"AMARELO","amplificado":false,"estacao":"D6594","wifiConectado":true}'`,
       "4_get_statistics": `curl -H 'Authorization: Bearer <token>' ${baseUrl}/auth/estatisticas-usuarios`
     }
   });
@@ -75,7 +75,7 @@ router.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    version: '2.0.0',
+    version: '3.0.0',
     environment: process.env.NODE_ENV || 'development',
     services: {
       database: 'connected',

@@ -10,36 +10,65 @@ datasource db {
 model LeiturasSensor {
   id                      Int      @default(autoincrement())
   timestamp               DateTime @default(now()) @db.Timestamptz(6)
+
+  // Sensor local
   umidadeSolo             Decimal? @map("umidade_solo") @db.Decimal(5, 2)
   valorAdc                Int?     @map("valor_adc")
   sensorOk                Boolean? @default(true) @map("sensor_ok")
   fatorLocal              Decimal? @map("fator_local") @db.Decimal(5, 3)
+
+  // BNDMET
   precipitacaoAtual       Decimal? @map("precipitacao_atual") @db.Decimal(8, 2)
   precipitacao24h         Decimal? @map("precipitacao_24h") @db.Decimal(8, 2)
   precipitacao7d          Decimal? @map("precipitacao_7d") @db.Decimal(8, 2)
   precipitacao30d         Decimal? @map("precipitacao_30d") @db.Decimal(8, 2)
   statusApiBndmet         String?  @map("status_api_bndmet") @db.VarChar(50)
   qualidadeDadosBndmet    Int?     @map("qualidade_dados_bndmet")
+  estacao                 String?  @db.VarChar(20)                         // código da estação BNDMET (ex.: "D6594")
+
+  // Meteorologia OWM
   temperatura             Decimal? @db.Decimal(5, 2)
   umidadeExterna          Decimal? @map("umidade_externa") @db.Decimal(5, 2)
   pressaoAtmosferica      Decimal? @map("pressao_atmosferica") @db.Decimal(7, 2)
   velocidadeVento         Decimal? @map("velocidade_vento") @db.Decimal(5, 2)
   descricaoTempo          String?  @map("descricao_tempo") @db.VarChar(100)
-  precipitacaoPrevisao6h  Decimal? @map("precipitacao_previsao_6h") @db.Decimal(8, 2)
-  precipitacaoPrevisao24h Decimal? @map("precipitacao_previsao_24h") @db.Decimal(8, 2)
+  chuvaAtualOWM           Decimal? @map("chuva_atual_owm") @db.Decimal(8, 2)  // rain.1h (mm/h)
+
+  // Previsão OWM /forecast
+  chuvaFutura24h          Decimal? @map("chuva_futura_24h") @db.Decimal(8, 2)  // soma rain.3h dos 8 blocos
+  intensidadePrevisao     String?  @map("intensidade_previsao") @db.VarChar(30) // "Fraca" | "Moderada" | "Forte" | "Muito Forte" | "Pancada de Chuva"
+  fatorIntensidade        Decimal? @map("fator_intensidade") @db.Decimal(4, 2)  // 0,00 / 0,25 / 0,50 / 0,75 / 1,00
+
+  // Análise de risco
   riscoIntegrado          Decimal? @map("risco_integrado") @db.Decimal(5, 2)
   indiceRisco             Int?     @map("indice_risco")
   nivelAlerta             String?  @map("nivel_alerta") @db.VarChar(20)
   recomendacao            String?
   confiabilidade          Int?
+  amplificado             Boolean? @default(false)                              // true quando coeficiente 1,20 foi aplicado
+  taxaVariacaoUmidade     Decimal? @map("taxa_variacao_umidade") @db.Decimal(6, 3) // ΔU do buffer circular (%/leitura)
+
+  // Componentes individuais da Equação 5 TCC
+  vLencol                 Decimal? @map("v_lencol") @db.Decimal(5, 4)
+  vChuvaAtual             Decimal? @map("v_chuva_atual") @db.Decimal(5, 4)
+  vChuvaHistorica         Decimal? @map("v_chuva_historica") @db.Decimal(5, 4)
+  vChuvaMensal            Decimal? @map("v_chuva_mensal") @db.Decimal(5, 4)
+  vChuvaFutura            Decimal? @map("v_chuva_futura") @db.Decimal(5, 4)
+  vTaxaVariacao           Decimal? @map("v_taxa_variacao") @db.Decimal(5, 4)
+  vPressao                Decimal? @map("v_pressao") @db.Decimal(5, 4)
+
+  // Status do sistema
   statusSistema           Int?     @map("status_sistema")
   buzzerAtivo             Boolean? @map("buzzer_ativo")
   modoManual              Boolean? @map("modo_manual")
   wifiConectado           Boolean? @map("wifi_conectado")
+
+  // Dados brutos (uptime, freeHeap, rssi, tentativasEnvio)
   dadosBrutos             Json?    @map("dados_brutos")
+
   createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  
+
   @@id([id, timestamp])
   @@map("leituras_sensor")
 }

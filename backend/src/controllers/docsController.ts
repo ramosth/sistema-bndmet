@@ -6,11 +6,11 @@ export class DocsController {
   // GET /api/endpoints - Lista completa de endpoints
   static async listarEndpoints(req: Request, res: Response) {
     const baseUrl = `${req.protocol}://${req.get('host')}/api`;
-    
+
     const endpoints = {
       "info": {
         "title": "SISTEMA MONITORAMENTO BARRAGEM ARDUINO feat BNDMET API",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "description": "Sistema de Monitoramento de Barragem de Rejeito",
         "baseUrl": baseUrl,
         "documentation": {
@@ -148,24 +148,76 @@ export class DocsController {
           {
             "method": "POST",
             "path": "/sensor/dados",
-            "description": "Receber dados do ESP8266",
+            "description": "Receber dados do ESP8266 (v3 — Equação 5 TCC)",
             "auth": "none",
             "body": {
               "required": [],
-              "optional": ["umidadeSolo", "valorAdc", "temperatura", "riscoIntegrado", "nivelAlerta"],
+              "optional": [
+                "umidadeSolo", "valorAdc", "sensorOk", "fatorLocal",
+                "precipitacaoAtual", "precipitacao24h", "precipitacao7d", "precipitacao30d",
+                "statusApiBndmet", "qualidadeDadosBndmet", "estacao",
+                "temperatura", "umidadeExterna", "pressaoAtmosferica", "velocidadeVento",
+                "descricaoTempo", "chuvaAtualOWM",
+                "chuvaFutura24h", "intensidadePrevisao", "fatorIntensidade",
+                "riscoIntegrado", "indiceRisco", "nivelAlerta", "recomendacao",
+                "confiabilidade", "amplificado", "taxaVariacaoUmidade",
+                "vLencol", "vChuvaAtual", "vChuvaHistorica", "vChuvaMensal",
+                "vChuvaFutura", "vTaxaVariacao", "vPressao",
+                "statusSistema", "buzzerAtivo", "modoManual", "wifiConectado", "dadosBrutos"
+              ],
               "example": {
-                "umidadeSolo": 25.5,
-                "valorAdc": 650,
-                "temperatura": 22.3,
-                "riscoIntegrado": 45.2,
+                "umidadeSolo": 18.5,
+                "valorAdc": 720,
+                "sensorOk": true,
+                "fatorLocal": 0.740,
+                "precipitacaoAtual": 1.2,
+                "precipitacao24h": 22.5,
+                "precipitacao7d": 87.3,
+                "precipitacao30d": 210.0,
+                "statusApiBndmet": "OK",
+                "qualidadeDadosBndmet": 96,
+                "estacao": "D6594",
+                "temperatura": 23.1,
+                "umidadeExterna": 74.0,
+                "pressaoAtmosferica": 1011.4,
+                "velocidadeVento": 3.8,
+                "descricaoTempo": "chuva fraca",
+                "chuvaAtualOWM": 0.8,
+                "chuvaFutura24h": 18.0,
+                "intensidadePrevisao": "Moderada",
+                "fatorIntensidade": 0.25,
+                "riscoIntegrado": 0.62,
+                "indiceRisco": 62,
                 "nivelAlerta": "AMARELO",
-                "recomendacao": "Monitoramento ativo"
+                "recomendacao": "Atenção — monitorar com frequência elevada",
+                "confiabilidade": 91,
+                "amplificado": false,
+                "taxaVariacaoUmidade": 0.320,
+                "vLencol": 0.2960,
+                "vChuvaAtual": 0.0360,
+                "vChuvaHistorica": 0.0698,
+                "vChuvaMensal": 0.0700,
+                "vChuvaFutura": 0.0375,
+                "vTaxaVariacao": 0.0320,
+                "vPressao": 0.0000,
+                "statusSistema": 1,
+                "buzzerAtivo": false,
+                "modoManual": false,
+                "wifiConectado": true,
+                "dadosBrutos": {
+                  "uptime": 3600000,
+                  "freeHeap": 28432,
+                  "rssi": -67,
+                  "tentativasEnvio": 1
+                }
               },
               "validation": {
                 "umidadeSolo": "0-100 (float)",
                 "valorAdc": "0-1023 (integer)",
                 "temperatura": "-50 a 60°C",
-                "nivelAlerta": "VERDE|AMARELO|VERMELHO|CRÍTICO"
+                "nivelAlerta": "VERDE|AMARELO|VERMELHO",
+                "fatorIntensidade": "0.00|0.25|0.50|0.75|1.00",
+                "intensidadePrevisao": "Fraca|Moderada|Forte|Muito Forte|Pancada de Chuva"
               }
             },
             "responses": {
@@ -336,13 +388,14 @@ export class DocsController {
           {
             "method": "GET",
             "path": "/sensor/alertas",
-            "description": "Buscar alertas críticos (níveis alto/crítico)",
+            "description": "Buscar alertas por nível (default: VERMELHO e AMARELO)",
             "auth": "admin",
             "query": {
-              "limite": "número de alertas (default: 50)"
+              "limite": "número de alertas (default: 50)",
+              "nivelAlerta": "VERDE|AMARELO|VERMELHO (opcional)"
             },
             "responses": {
-              "200": "Alertas de nível CRÍTICO, ALTO, VERMELHO"
+              "200": "Alertas filtrados por nível"
             }
           },
           {
@@ -350,8 +403,23 @@ export class DocsController {
             "path": "/sensor/estatisticas",
             "description": "Estatísticas gerais dos sensores",
             "auth": "admin",
+            "query": {
+              "periodo": "período em horas para análise (default: 24)"
+            },
             "responses": {
-              "200": "Total de leituras, médias últimas 24h, alertas críticos"
+              "200": "Total de leituras, médias, qualidade de dados e tendências"
+            }
+          },
+          {
+            "method": "GET",
+            "path": "/sensor/qualidade",
+            "description": "Análise de qualidade dos dados dos sensores e BNDMET",
+            "auth": "admin",
+            "query": {
+              "periodo": "período em horas (default: 24)"
+            },
+            "responses": {
+              "200": "Percentuais de qualidade BNDMET, sensor e confiabilidade"
             }
           },
           {
@@ -429,7 +497,7 @@ export class DocsController {
         "curl": {
           "login": `curl -X POST ${baseUrl}/auth/login -H 'Content-Type: application/json' -d '{"email":"admin@bndmet.com","senha":"admin123"}'`,
           "authenticated": `curl -H 'Authorization: Bearer <token>' ${baseUrl}/auth/perfil`,
-          "sensor_data": `curl -X POST ${baseUrl}/sensor/dados -H 'Content-Type: application/json' -d '{"umidadeSolo":25.5,"temperatura":22.3}'`,
+          "sensor_data": `curl -X POST ${baseUrl}/sensor/dados -H 'Content-Type: application/json' -d '{"umidadeSolo":18.5,"fatorLocal":0.740,"chuvaFutura24h":18.0,"intensidadePrevisao":"Moderada","fatorIntensidade":0.25,"riscoIntegrado":0.62,"indiceRisco":62,"nivelAlerta":"AMARELO","amplificado":false,"estacao":"D6594"}'`,
           "get_stats": `curl -H 'Authorization: Bearer <token>' ${baseUrl}/auth/estatisticas-usuarios`
         },
         "javascript": {
@@ -440,21 +508,31 @@ export class DocsController {
 });`,
           "authenticated": `fetch('${baseUrl}/auth/perfil', {
   headers: { 'Authorization': 'Bearer ' + token }
+});`,
+          "sensor_data": `fetch('${baseUrl}/sensor/dados', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    umidadeSolo: 18.5, fatorLocal: 0.740,
+    chuvaFutura24h: 18.0, intensidadePrevisao: 'Moderada', fatorIntensidade: 0.25,
+    riscoIntegrado: 0.62, indiceRisco: 62, nivelAlerta: 'AMARELO',
+    amplificado: false, estacao: 'D6594'
+  })
 });`
         }
       },
       "summary": {
-        "totalEndpoints": 25,
+        "totalEndpoints": 26,
         "categories": {
           "publicos": 8,
           "autenticados": 4,
-          "administrativos": 12,
+          "administrativos": 13,
           "superAdmin": 1
         },
         "authLevels": {
           "none": 8,
           "bearer": 4,
-          "admin": 12,
+          "admin": 13,
           "super_admin": 1
         }
       }
@@ -466,11 +544,11 @@ export class DocsController {
   // GET /api/docs-info - Informações sobre documentação
   static async informacoesDocumentacao(req: Request, res: Response) {
     const baseUrl = `${req.protocol}://${req.get('host')}/api`;
-    
+
     const info = {
       "documentation": {
         "title": "Documentação SISTEMA MONITORAMENTO BARRAGEM ARDUINO feat BNDMET API",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "description": "Sistema completo de documentação da API",
         "available_formats": [
           {
@@ -515,7 +593,8 @@ export class DocsController {
         "common_patterns": {
           "pagination": "?pagina=1&limite=50",
           "date_filter": "?dataInicio=2025-07-01T00:00:00Z&dataFim=2025-07-05T23:59:59Z",
-          "log_filter": "?nivel=ERROR&componente=SENSOR&limite=100"
+          "log_filter": "?nivel=ERROR&componente=SENSOR&limite=100",
+          "alert_filter": "?nivelAlerta=VERMELHO&limite=50"
         }
       },
       "tools": {
@@ -560,9 +639,9 @@ export class DocsController {
         ]
       },
       "statistics": {
-        "total_endpoints": 25,
+        "total_endpoints": 26,
         "by_method": {
-          "GET": 12,
+          "GET": 13,
           "POST": 11,
           "PUT": 1,
           "DELETE": 0,
@@ -571,7 +650,7 @@ export class DocsController {
         "by_auth_level": {
           "public": 8,
           "authenticated": 4,
-          "admin": 12,
+          "admin": 13,
           "super_admin": 1
         },
         "response_codes": {
@@ -594,16 +673,16 @@ export class DocsController {
   // GET /api/test-endpoints - Script de teste dos endpoints
   static async scriptTeste(req: Request, res: Response) {
     const baseUrl = `${req.protocol}://${req.get('host')}/api`;
-    
+
     const script = {
-      "title": "Script de Teste da API BNDMET",
+      "title": "Script de Teste da API BNDMET v3",
       "description": "Scripts para testar todos os endpoints da API",
       "bash_script": `#!/bin/bash
-# Script de teste completo da API BNDMET
+# Script de teste completo da API BNDMET v3
 API_URL="${baseUrl}"
 
-echo "🧪 TESTE COMPLETO DA API BNDMET"
-echo "==============================="
+echo "🧪 TESTE COMPLETO DA API BNDMET v3"
+echo "==================================="
 
 # 1. Health Check
 echo "1️⃣ Health Check..."
@@ -626,15 +705,30 @@ curl -s -H "Authorization: Bearer \$TOKEN" \${API_URL}/auth/perfil | jq '.'
 echo "4️⃣ Estatísticas..."
 curl -s -H "Authorization: Bearer \$TOKEN" \${API_URL}/auth/estatisticas-usuarios | jq '.'
 
-# 5. Dados de sensor
-echo "5️⃣ Enviando dados de sensor..."
+# 5. Dados de sensor (payload v3 completo)
+echo "5️⃣ Enviando dados de sensor (v3)..."
 curl -s -X POST \${API_URL}/sensor/dados \\
   -H "Content-Type: application/json" \\
-  -d '{"umidadeSolo":25.5,"temperatura":22.3,"riscoIntegrado":45.2,"nivelAlerta":"AMARELO"}' | jq '.'
+  -d '{
+    "umidadeSolo": 18.5, "valorAdc": 720, "sensorOk": true, "fatorLocal": 0.740,
+    "precipitacao24h": 22.5, "precipitacao7d": 87.3, "precipitacao30d": 210.0,
+    "statusApiBndmet": "OK", "qualidadeDadosBndmet": 96, "estacao": "D6594",
+    "temperatura": 23.1, "umidadeExterna": 74.0, "pressaoAtmosferica": 1011.4,
+    "chuvaFutura24h": 18.0, "intensidadePrevisao": "Moderada", "fatorIntensidade": 0.25,
+    "riscoIntegrado": 0.62, "indiceRisco": 62, "nivelAlerta": "AMARELO",
+    "amplificado": false, "taxaVariacaoUmidade": 0.320,
+    "vLencol": 0.2960, "vChuvaAtual": 0.0360, "vChuvaHistorica": 0.0698,
+    "vChuvaMensal": 0.0700, "vChuvaFutura": 0.0375, "vTaxaVariacao": 0.0320, "vPressao": 0.0000,
+    "wifiConectado": true, "dadosBrutos": {"uptime": 3600000, "freeHeap": 28432, "rssi": -67}
+  }' | jq '.'
+
+# 6. Status do sensor
+echo "6️⃣ Status do sensor..."
+curl -s \${API_URL}/sensor/status | jq '.'
 
 echo "✅ Teste concluído!"`,
-      
-      "javascript_example": `// Exemplo de uso em JavaScript
+
+      "javascript_example": `// Exemplo de uso em JavaScript — API v3
 const API_URL = '${baseUrl}';
 
 // 1. Login
@@ -642,12 +736,8 @@ async function login() {
   const response = await fetch(\`\${API_URL}/auth/login\`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: 'admin@bndmet.com',
-      senha: 'admin123'
-    })
+    body: JSON.stringify({ email: 'admin@bndmet.com', senha: 'admin123' })
   });
-  
   const data = await response.json();
   return data.data.token;
 }
@@ -657,24 +747,28 @@ async function getProfile(token) {
   const response = await fetch(\`\${API_URL}/auth/perfil\`, {
     headers: { 'Authorization': \`Bearer \${token}\` }
   });
-  
   return await response.json();
 }
 
-// 3. Enviar dados
-async function sendSensorData(data) {
+// 3. Enviar dados do sensor (payload v3)
+async function sendSensorData(token) {
   const response = await fetch(\`\${API_URL}/sensor/dados\`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify({
+      umidadeSolo: 18.5, fatorLocal: 0.740,
+      precipitacao24h: 22.5, precipitacao7d: 87.3, estacao: 'D6594',
+      chuvaFutura24h: 18.0, intensidadePrevisao: 'Moderada', fatorIntensidade: 0.25,
+      riscoIntegrado: 0.62, indiceRisco: 62, nivelAlerta: 'AMARELO',
+      amplificado: false, vLencol: 0.2960, vChuvaFutura: 0.0375,
+      wifiConectado: true
+    })
   });
-  
   return await response.json();
 }`,
 
-      "python_example": `# Exemplo de uso em Python
+      "python_example": `# Exemplo de uso em Python — API v3
 import requests
-import json
 
 API_URL = '${baseUrl}'
 
@@ -692,7 +786,7 @@ def get_profile(token):
     response = requests.get(f'{API_URL}/auth/perfil', headers=headers)
     return response.json()
 
-# 3. Enviar dados
+# 3. Enviar dados do sensor (payload v3)
 def send_sensor_data(data):
     response = requests.post(f'{API_URL}/sensor/dados', json=data)
     return response.json()
@@ -701,15 +795,16 @@ def send_sensor_data(data):
 token = login()
 profile = get_profile(token)
 result = send_sensor_data({
-    'umidadeSolo': 25.5,
-    'temperatura': 22.3,
-    'riscoIntegrado': 45.2,
-    'nivelAlerta': 'AMARELO'
+    'umidadeSolo': 18.5, 'fatorLocal': 0.740,
+    'precipitacao24h': 22.5, 'estacao': 'D6594',
+    'chuvaFutura24h': 18.0, 'intensidadePrevisao': 'Moderada', 'fatorIntensidade': 0.25,
+    'riscoIntegrado': 0.62, 'indiceRisco': 62, 'nivelAlerta': 'AMARELO',
+    'amplificado': False, 'wifiConectado': True
 })`,
 
       "postman_collection": {
         "info": {
-          "name": "SISTEMA MONITORAMENTO BARRAGEM ARDUINO feat BNDMET API",
+          "name": "SISTEMA MONITORAMENTO BARRAGEM ARDUINO feat BNDMET API v3",
           "description": "Coleção completa da API de monitoramento de barragens de rejeito integrado com BNDMET",
           "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
         },
@@ -721,13 +816,10 @@ result = send_sensor_data({
                 "name": "Login",
                 "request": {
                   "method": "POST",
-                  "header": [{"key": "Content-Type", "value": "application/json"}],
+                  "header": [{ "key": "Content-Type", "value": "application/json" }],
                   "body": {
                     "mode": "raw",
-                    "raw": JSON.stringify({
-                      "email": "admin@bndmet.com",
-                      "senha": "admin123"
-                    })
+                    "raw": JSON.stringify({ "email": "admin@bndmet.com", "senha": "admin123" })
                   },
                   "url": {
                     "raw": `${baseUrl}/auth/login`,
@@ -740,21 +832,26 @@ result = send_sensor_data({
           }
         ]
       },
-      
+
       "curl_examples": {
         "login": `curl -X POST ${baseUrl}/auth/login \\
   -H 'Content-Type: application/json' \\
   -d '{"email":"admin@bndmet.com","senha":"admin123"}'`,
-        
+
         "get_profile": `curl -H 'Authorization: Bearer <TOKEN>' \\
   ${baseUrl}/auth/perfil`,
-        
+
         "send_sensor_data": `curl -X POST ${baseUrl}/sensor/dados \\
   -H 'Content-Type: application/json' \\
-  -d '{"umidadeSolo":25.5,"temperatura":22.3,"riscoIntegrado":45.2}'`,
-        
+  -d '{"umidadeSolo":18.5,"fatorLocal":0.740,"chuvaFutura24h":18.0,"intensidadePrevisao":"Moderada","fatorIntensidade":0.25,"riscoIntegrado":0.62,"indiceRisco":62,"nivelAlerta":"AMARELO","amplificado":false,"estacao":"D6594","wifiConectado":true}'`,
+
         "get_statistics": `curl -H 'Authorization: Bearer <TOKEN>' \\
-  ${baseUrl}/auth/estatisticas-usuarios`
+  ${baseUrl}/auth/estatisticas-usuarios`,
+
+        "get_sensor_status": `curl ${baseUrl}/sensor/status`,
+
+        "get_alertas": `curl -H 'Authorization: Bearer <TOKEN>' \\
+  '${baseUrl}/sensor/alertas?nivelAlerta=VERMELHO&limite=20'`
       }
     };
 
