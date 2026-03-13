@@ -31,7 +31,7 @@ export default function UserTable({
   const handleToggleStatus = async (user) => {
     setTogglingStatus(user.id);
     try {
-      const isBasic = checkIfBasicUser(user); // CORREÇÃO: usar função renomeada
+      const isBasic = checkIfBasicUser(user);
       const newStatus = !user.ativo;
       
       console.log('🔄 Alterando status:', { user: user.nome, isBasic, newStatus });
@@ -65,7 +65,7 @@ export default function UserTable({
     
     setLoading(true);
     try {
-      const isBasic = checkIfBasicUser(userToDelete); // CORREÇÃO: usar função renomeada
+      const isBasic = checkIfBasicUser(userToDelete);
       
       console.log('🔍 Tipo de usuário:', { isBasic, user: userToDelete.nome });
       
@@ -251,7 +251,7 @@ export default function UserTable({
           </thead>
           <tbody>
             {users.map((user, index) => {
-              const isBasic = checkIfBasicUser(user); // CORREÇÃO: usar função renomeada
+              const isBasic = checkIfBasicUser(user);
               
               return (
                 <tr 

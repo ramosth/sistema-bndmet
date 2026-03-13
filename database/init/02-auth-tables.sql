@@ -1,93 +1,109 @@
--- backend > init > 02-auth-table.sql
--- Log de início
-SELECT 'Iniciando criação das tabelas de autenticação...' as status;
+-- backend > init > 02-auth-tables.sql
+-- Executado automaticamente após 01-init.sql (ordem alfabética Docker)
+SELECT 'Iniciando criação das tabelas de autenticação...' AS status;
 
--- Extensão para gerar UUIDs
+-- ============================================================
+-- EXTENSÃO uuid-ossp (garantia — já executada no 01, idempotente)
+-- ============================================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Função para atualizar updated_at
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Tabela de usuários administradores
+-- ============================================================
+-- TABELA: usuarios_admin
+-- ============================================================
 CREATE TABLE IF NOT EXISTS usuarios_admin (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nome VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    senha_hash VARCHAR(255) NOT NULL,
-    perfil VARCHAR(20) DEFAULT 'admin' CHECK (perfil IN ('admin', 'super_admin')),
-    ativo BOOLEAN DEFAULT true,
-    ultimo_login TIMESTAMPTZ,
-    token_reset VARCHAR(255),
-    token_reset_expira TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    id                  UUID        NOT NULL DEFAULT uuid_generate_v4(),
+    nome                VARCHAR(100) NOT NULL,
+    email               VARCHAR(255) NOT NULL,
+    senha_hash          VARCHAR(255) NOT NULL,
+    perfil              VARCHAR(20)  NOT NULL DEFAULT 'admin'
+                            CHECK (perfil IN ('admin', 'super_admin')),
+    ativo               BOOLEAN      NOT NULL DEFAULT true,
+    ultimo_login        TIMESTAMPTZ,
+    token_reset         VARCHAR(255),
+    token_reset_expira  TIMESTAMPTZ,
+    created_at          TIMESTAMPTZ  NOT NULL DEFAULT utc_now(),
+    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT utc_now(),
+    CONSTRAINT usuarios_admin_pkey      PRIMARY KEY (id),
+    CONSTRAINT usuarios_admin_email_key UNIQUE (email)
 );
 
--- Tabela de usuários básicos (para notificações)
+-- ============================================================
+-- TABELA: usuarios_basicos
+-- ============================================================
 CREATE TABLE IF NOT EXISTS usuarios_basicos (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nome VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    telefone VARCHAR(20),
-    ativo BOOLEAN DEFAULT true,
-    receber_notificacoes BOOLEAN DEFAULT true,
-    tipo_notificacao VARCHAR(50) DEFAULT 'email,sms' CHECK (tipo_notificacao ~ '^(email|sms|push)(,(email|sms|push))*$'),
+    id                    UUID         NOT NULL DEFAULT uuid_generate_v4(),
+    nome                  VARCHAR(100) NOT NULL,
+    email                 VARCHAR(255) NOT NULL,
+    telefone              VARCHAR(20),
+    ativo                 BOOLEAN      NOT NULL DEFAULT true,
+    receber_notificacoes  BOOLEAN      NOT NULL DEFAULT true,
+    tipo_notificacao      VARCHAR(50)  NOT NULL DEFAULT 'email,sms'
+                              CHECK (tipo_notificacao ~ '^(email|sms|push)(,(email|sms|push))*$'),
     ultimo_alerta_enviado TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    created_at            TIMESTAMPTZ  NOT NULL DEFAULT utc_now(),
+    updated_at            TIMESTAMPTZ  NOT NULL DEFAULT utc_now(),
+    CONSTRAINT usuarios_basicos_pkey      PRIMARY KEY (id),
+    CONSTRAINT usuarios_basicos_email_key UNIQUE (email)
 );
 
--- Tabela de sessões/tokens
+-- ============================================================
+-- TABELA: sessoes_usuario
+-- ============================================================
 CREATE TABLE IF NOT EXISTS sessoes_usuario (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    usuario_id UUID NOT NULL REFERENCES usuarios_admin(id) ON DELETE CASCADE,
-    token VARCHAR(500) NOT NULL,
-    ip_address INET,
-    user_agent TEXT,
-    expires_at TIMESTAMPTZ NOT NULL,
-    ativo BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    id          UUID         NOT NULL DEFAULT uuid_generate_v4(),
+    usuario_id  UUID         NOT NULL
+                    REFERENCES usuarios_admin(id) ON DELETE CASCADE,
+    token       VARCHAR(500) NOT NULL,
+    ip_address  INET,
+    user_agent  TEXT,
+    expires_at  TIMESTAMPTZ  NOT NULL,
+    ativo       BOOLEAN      NOT NULL DEFAULT true,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT utc_now(),
+    CONSTRAINT sessoes_usuario_pkey PRIMARY KEY (id)
 );
 
--- Tabela de logs de alertas enviados
+-- ============================================================
+-- TABELA: logs_alertas
+-- ============================================================
 CREATE TABLE IF NOT EXISTS logs_alertas (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    usuario_admin_id UUID REFERENCES usuarios_admin(id),
-    tipo_destinatario VARCHAR(20) NOT NULL CHECK (tipo_destinatario IN ('basico', 'admin', 'todos')),
+    id                UUID         NOT NULL DEFAULT uuid_generate_v4(),
+    usuario_admin_id  UUID
+                          REFERENCES usuarios_admin(id) ON DELETE SET NULL,
+    tipo_destinatario VARCHAR(20)  NOT NULL
+                          CHECK (tipo_destinatario IN ('basico', 'admin', 'todos')),
     destinatarios_ids UUID[],
-    tipo_alerta VARCHAR(50) NOT NULL,
-    nivel_criticidade VARCHAR(20) NOT NULL,
-    titulo VARCHAR(200) NOT NULL,
-    mensagem TEXT NOT NULL,
-    canais_envio VARCHAR(100) NOT NULL, -- email,sms,push
-    total_enviados INTEGER DEFAULT 0,
-    total_sucesso INTEGER DEFAULT 0,
-    total_falhas INTEGER DEFAULT 0,
-    detalhes_envio JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    tipo_alerta       VARCHAR(50)  NOT NULL,
+    nivel_criticidade VARCHAR(20)  NOT NULL,
+    titulo            VARCHAR(200) NOT NULL,
+    mensagem          TEXT         NOT NULL,
+    canais_envio      VARCHAR(100) NOT NULL,
+    total_enviados    INTEGER      NOT NULL DEFAULT 0,
+    total_sucesso     INTEGER      NOT NULL DEFAULT 0,
+    total_falhas      INTEGER      NOT NULL DEFAULT 0,
+    detalhes_envio    JSONB,
+    created_at        TIMESTAMPTZ  NOT NULL DEFAULT utc_now(),
+    CONSTRAINT logs_alertas_pkey PRIMARY KEY (id)
 );
 
--- Índices para performance
-CREATE INDEX IF NOT EXISTS idx_usuarios_admin_email ON usuarios_admin(email);
-CREATE INDEX IF NOT EXISTS idx_usuarios_admin_ativo ON usuarios_admin(ativo);
-CREATE INDEX IF NOT EXISTS idx_usuarios_basicos_email ON usuarios_basicos(email);
-CREATE INDEX IF NOT EXISTS idx_usuarios_basicos_ativo ON usuarios_basicos(ativo);
-CREATE INDEX IF NOT EXISTS idx_sessoes_token ON sessoes_usuario(token);
-CREATE INDEX IF NOT EXISTS idx_sessoes_usuario_id ON sessoes_usuario(usuario_id);
-CREATE INDEX IF NOT EXISTS idx_sessoes_expires ON sessoes_usuario(expires_at);
-CREATE INDEX IF NOT EXISTS idx_logs_alertas_created ON logs_alertas(created_at DESC);
+-- ============================================================
+-- ÍNDICES
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_usuarios_admin_email     ON usuarios_admin(email);
+CREATE INDEX IF NOT EXISTS idx_usuarios_admin_ativo     ON usuarios_admin(ativo);
+CREATE INDEX IF NOT EXISTS idx_usuarios_basicos_email   ON usuarios_basicos(email);
+CREATE INDEX IF NOT EXISTS idx_usuarios_basicos_ativo   ON usuarios_basicos(ativo);
+CREATE INDEX IF NOT EXISTS idx_sessoes_token            ON sessoes_usuario(token);
+CREATE INDEX IF NOT EXISTS idx_sessoes_usuario_id       ON sessoes_usuario(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_sessoes_expires          ON sessoes_usuario(expires_at);
+CREATE INDEX IF NOT EXISTS idx_logs_alertas_created     ON logs_alertas(created_at DESC);
 
--- Triggers para atualizar updated_at
-DO $$ 
+-- ============================================================
+-- TRIGGERS (update_updated_at_column definida no 01-init.sql)
+-- ============================================================
+DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.triggers 
+        SELECT 1 FROM information_schema.triggers
         WHERE trigger_name = 'update_usuarios_admin_updated_at'
     ) THEN
         CREATE TRIGGER update_usuarios_admin_updated_at
@@ -96,10 +112,10 @@ BEGIN
     END IF;
 END $$;
 
-DO $$ 
+DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM information_schema.triggers 
+        SELECT 1 FROM information_schema.triggers
         WHERE trigger_name = 'update_usuarios_basicos_updated_at'
     ) THEN
         CREATE TRIGGER update_usuarios_basicos_updated_at
@@ -108,46 +124,24 @@ BEGIN
     END IF;
 END $$;
 
--- Inserir usuário administrador padrão
--- Senha: admin123 (hash bcrypt)
-INSERT INTO usuarios_admin (nome, email, senha_hash, perfil) VALUES 
-('Administrador Sistema', 'admin@bndmet.com', '$2a$10$ClVatGSU.R9nFJzbHBv1N.MMHuPV04mEslmUJSmQFytyXuZxJTHgC', 'super_admin')
-ON CONFLICT (email) DO NOTHING;
+-- ============================================================
+-- FUNÇÕES AUXILIARES
+-- ============================================================
 
--- Inserir alguns usuários básicos de exemplo
-INSERT INTO usuarios_basicos (nome, email, telefone) VALUES 
-('João Silva', 'joao@email.com', '(11) 99999-0001'),
-('Maria Santos', 'maria@email.com', '(11) 99999-0002'),
-('Pedro Oliveira', 'pedro@email.com', '(11) 99999-0003'),
-('Ana Costa', 'ana@email.com', '(11) 99999-0004'),
-('Carlos Ferreira', 'carlos@email.com', '(11) 99999-0005')
-ON CONFLICT (email) DO NOTHING;
-
--- View para estatísticas de usuários
-CREATE OR REPLACE VIEW view_estatisticas_usuarios AS
-SELECT
-    (SELECT COUNT(*) FROM usuarios_admin WHERE ativo = true) as total_admins_ativos,
-    (SELECT COUNT(*) FROM usuarios_admin WHERE ativo = false) as total_admins_inativos,
-    (SELECT COUNT(*) FROM usuarios_basicos WHERE ativo = true) as total_basicos_ativos,
-    (SELECT COUNT(*) FROM usuarios_basicos WHERE ativo = false) as total_basicos_inativos,
-    (SELECT COUNT(*) FROM usuarios_basicos WHERE receber_notificacoes = true) as total_com_notificacoes,
-    (SELECT COUNT(*) FROM logs_alertas WHERE created_at >= NOW() - INTERVAL '30 days') as alertas_ultimos_30_dias;
-
--- Função para limpar sessões expiradas
+-- Limpar sessões expiradas (uso em manutenção agendada)
 CREATE OR REPLACE FUNCTION limpar_sessoes_expiradas()
 RETURNS INTEGER AS $$
 DECLARE
     deletadas INTEGER;
 BEGIN
-    DELETE FROM sessoes_usuario 
+    DELETE FROM sessoes_usuario
     WHERE expires_at < NOW() OR ativo = false;
-    
     GET DIAGNOSTICS deletadas = ROW_COUNT;
     RETURN deletadas;
 END;
 $$ LANGUAGE plpgsql;
 
--- Função para validar email
+-- Validar formato de e-mail
 CREATE OR REPLACE FUNCTION validar_email(email_input TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -155,23 +149,52 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Comentários nas tabelas
-COMMENT ON TABLE usuarios_admin IS 'Usuários administradores do sistema com acesso completo';
+-- ============================================================
+-- VIEW: estatísticas de usuários
+-- ============================================================
+CREATE OR REPLACE VIEW view_estatisticas_usuarios AS
+SELECT
+    (SELECT COUNT(*) FROM usuarios_admin  WHERE ativo = true)                          AS total_admins_ativos,
+    (SELECT COUNT(*) FROM usuarios_admin  WHERE ativo = false)                         AS total_admins_inativos,
+    (SELECT COUNT(*) FROM usuarios_basicos WHERE ativo = true)                         AS total_basicos_ativos,
+    (SELECT COUNT(*) FROM usuarios_basicos WHERE ativo = false)                        AS total_basicos_inativos,
+    (SELECT COUNT(*) FROM usuarios_basicos WHERE receber_notificacoes = true)          AS total_com_notificacoes,
+    (SELECT COUNT(*) FROM logs_alertas    WHERE created_at >= NOW() - INTERVAL '30 days') AS alertas_ultimos_30_dias;
+
+-- ============================================================
+-- COMENTÁRIOS
+-- ============================================================
+COMMENT ON TABLE usuarios_admin   IS 'Usuários administradores com acesso completo à API';
 COMMENT ON TABLE usuarios_basicos IS 'Usuários básicos que recebem notificações de alertas';
-COMMENT ON TABLE sessoes_usuario IS 'Controle de sessões ativas dos usuários';
-COMMENT ON TABLE logs_alertas IS 'Histórico de alertas enviados pelo sistema';
+COMMENT ON TABLE sessoes_usuario  IS 'Sessões JWT ativas dos administradores';
+COMMENT ON TABLE logs_alertas     IS 'Histórico de alertas enviados pelo sistema';
 
--- Verificações finais
-SELECT 'Tabelas de autenticação criadas com sucesso!' as status;
+-- ============================================================
+-- DADOS INICIAIS
+-- ============================================================
 
--- Mostrar estatísticas
-SELECT 
-    'Usuários admin criados: ' || COUNT(*) as admin_count 
-FROM usuarios_admin;
+-- Administrador padrão — senha: admin123 (bcrypt $2a$10$...)
+INSERT INTO usuarios_admin (nome, email, senha_hash, perfil) VALUES
+('Administrador Sistema', 'admin@bndmet.com',
+ '$2a$10$ClVatGSU.R9nFJzbHBv1N.MMHuPV04mEslmUJSmQFytyXuZxJTHgC',
+ 'super_admin')
+ON CONFLICT (email) DO NOTHING;
 
-SELECT 
-    'Usuários básicos criados: ' || COUNT(*) as basic_count 
-FROM usuarios_basicos;
+-- Usuários básicos de exemplo
+INSERT INTO usuarios_basicos (nome, email, telefone) VALUES
+('João Silva',     'joao@email.com',   '(11) 99999-0001'),
+('Maria Santos',   'maria@email.com',  '(11) 99999-0002'),
+('Pedro Oliveira', 'pedro@email.com',  '(11) 99999-0003'),
+('Ana Costa',      'ana@email.com',    '(11) 99999-0004'),
+('Carlos Ferreira','carlos@email.com', '(11) 99999-0005')
+ON CONFLICT (email) DO NOTHING;
 
--- Log de conclusão
-SELECT 'Script 02-auth-tables.sql executado com sucesso!' as status;
+-- ============================================================
+-- VERIFICAÇÃO FINAL
+-- ============================================================
+SELECT 'Tabelas de autenticação criadas com sucesso!' AS status;
+
+SELECT 'Usuários admin: ' || COUNT(*) AS admin_count FROM usuarios_admin;
+SELECT 'Usuários básicos: ' || COUNT(*) AS basic_count FROM usuarios_basicos;
+
+SELECT 'Script 02-auth-tables.sql executado com sucesso!' AS status;

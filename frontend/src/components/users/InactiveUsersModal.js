@@ -30,7 +30,6 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
       console.log('📦 Response usuários inativos:', response);
       
       if (response.success) {
-        // CORREÇÃO: A API retorna os usuários diretamente em response.data (array)
         const usersData = Array.isArray(response.data) ? response.data : [];
         console.log('✅ Usuários inativos encontrados:', usersData.length, usersData);
         setInactiveUsers(usersData);
