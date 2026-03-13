@@ -1,4 +1,5 @@
 // backend > src > services > sensorService.ts
+
 import prisma from '../config/database';
 import { DadosESP8266, LogEntry } from '../types';
 
@@ -13,97 +14,111 @@ export class SensorService {
   static async salvarDados(dados: DadosESP8266) {
     try {
       console.log('💾 Salvando dados do sensor:', {
-        umidade: dados.umidadeSolo,
-        risco: dados.riscoIntegrado,
-        nivel: dados.nivelAlerta,
-        timestamp: new Date().toISOString()
+        umidade:   dados.umidadeSolo,
+        risco:     dados.riscoIntegrado,
+        nivel:     dados.nivelAlerta,
+        timestamp: new Date().toISOString(),
       });
 
       const novaLeitura = await prisma.leiturasSensor.create({
         data: {
           // Sensor local
-          timestamp:              dados.timestamp ? new Date(dados.timestamp) : undefined,
-          umidadeSolo:            dados.umidadeSolo,
-          valorAdc:               dados.valorAdc,
-          sensorOk:               dados.sensorOk,
-          fatorLocal:             dados.fatorLocal,
+          timestamp:            dados.timestamp ? new Date(dados.timestamp) : undefined,
+          umidadeSolo:          dados.umidadeSolo,
+          valorAdc:             dados.valorAdc,
+          sensorOk:             dados.sensorOk,
+          fatorLocal:           dados.fatorLocal,
 
           // BNDMET
-          precipitacaoAtual:      dados.precipitacaoAtual,
-          precipitacao24h:        dados.precipitacao24h,
-          precipitacao7d:         dados.precipitacao7d,
-          precipitacao30d:        dados.precipitacao30d,
-          statusApiBndmet:        dados.statusApiBndmet,
-          qualidadeDadosBndmet:   dados.qualidadeDadosBndmet,
-          estacao:                dados.estacao,
+          precipitacaoAtual:    dados.precipitacaoAtual,
+          precipitacao24h:      dados.precipitacao24h,
+          precipitacao7d:       dados.precipitacao7d,
+          precipitacao30d:      dados.precipitacao30d,
+          statusApiBndmet:      dados.statusApiBndmet,
+          qualidadeDadosBndmet: dados.qualidadeDadosBndmet,
+          estacao:              dados.estacao,
 
           // Meteorologia OWM
-          temperatura:            dados.temperatura,
-          umidadeExterna:         dados.umidadeExterna,
-          pressaoAtmosferica:     dados.pressaoAtmosferica,
-          velocidadeVento:        dados.velocidadeVento,
-          descricaoTempo:         dados.descricaoTempo,
-          chuvaAtualOWM:          dados.chuvaAtualOWM,
+          temperatura:          dados.temperatura,
+          umidadeExterna:       dados.umidadeExterna,
+          pressaoAtmosferica:   dados.pressaoAtmosferica,
+          velocidadeVento:      dados.velocidadeVento,
+          descricaoTempo:       dados.descricaoTempo,
+          chuvaAtualOWM:        dados.chuvaAtualOWM,
 
           // Previsão OWM /forecast
-          chuvaFutura24h:         dados.chuvaFutura24h,
-          intensidadePrevisao:    dados.intensidadePrevisao,
-          fatorIntensidade:       dados.fatorIntensidade,
+          chuvaFutura24h:       dados.chuvaFutura24h,
+          intensidadePrevisao:  dados.intensidadePrevisao,
+          fatorIntensidade:     dados.fatorIntensidade,
 
           // Análise de risco
-          riscoIntegrado:         dados.riscoIntegrado,
-          indiceRisco:            dados.indiceRisco,
-          nivelAlerta:            dados.nivelAlerta,
-          recomendacao:           dados.recomendacao,
-          confiabilidade:         dados.confiabilidade,
-          amplificado:            dados.amplificado,
-          taxaVariacaoUmidade:    dados.taxaVariacaoUmidade,
+          riscoIntegrado:       dados.riscoIntegrado,
+          indiceRisco:          dados.indiceRisco,
+          nivelAlerta:          dados.nivelAlerta,
+          recomendacao:         dados.recomendacao,
+          confiabilidade:       dados.confiabilidade,
+          amplificado:          dados.amplificado === true ? true : false,
+          taxaVariacaoUmidade:  dados.taxaVariacaoUmidade,
 
           // Componentes individuais da Equação 5 TCC
-          vLencol:                dados.vLencol,
-          vChuvaAtual:            dados.vChuvaAtual,
-          vChuvaHistorica:        dados.vChuvaHistorica,
-          vChuvaMensal:           dados.vChuvaMensal,
-          vChuvaFutura:           dados.vChuvaFutura,
-          vTaxaVariacao:          dados.vTaxaVariacao,
-          vPressao:               dados.vPressao,
+          vLencol:              dados.vLencol,
+          vChuvaAtual:          dados.vChuvaAtual,
+          vChuvaHistorica:      dados.vChuvaHistorica,
+          vChuvaMensal:         dados.vChuvaMensal,
+          vChuvaFutura:         dados.vChuvaFutura,
+          vTaxaVariacao:        dados.vTaxaVariacao,
+          vPressao:             dados.vPressao,
 
           // Status do sistema
-          statusSistema:          dados.statusSistema,
-          buzzerAtivo:            dados.buzzerAtivo,
-          modoManual:             dados.modoManual,
-          wifiConectado:          dados.wifiConectado,
+          statusSistema:        dados.statusSistema,
+          buzzerAtivo:          dados.buzzerAtivo,
+          // modoManual: Arduino envia false (booleano) → grava false
+          // curl/Postman omitem campo → undefined → grava true (operação manual)
+          modoManual:           dados.modoManual === true ? true
+                                  : dados.modoManual === false ? false
+                                  : true,
+          wifiConectado:        dados.wifiConectado,
 
-          // Dados brutos
-          dadosBrutos:            dados.dadosBrutos,
+          // Dados brutos de diagnóstico
+          dadosBrutos:          dados.dadosBrutos,
         },
       });
 
-      // Determinar nível do log baseado no risco integrado
+      // ─────────────────────────────────────────────────────────────────────
+      // Limites corretos: VERDE ≤ 0,50 | AMARELO ≤ 0,80 | VERMELHO > 0,80
+      // Fonte: Tabela 5 TCC (cap3_materiais_metodos)
+      // ─────────────────────────────────────────────────────────────────────
       let nivelLog: 'INFO' | 'WARNING' | 'CRITICAL' = 'INFO';
       let mensagemLog = 'Dados recebidos do ESP8266';
 
       if (dados.riscoIntegrado !== undefined && dados.riscoIntegrado !== null) {
-        if (dados.riscoIntegrado <= 50) {
-          nivelLog = 'INFO';
-          mensagemLog = 'Dados recebidos - situação normal (risco baixo)';
-        } else if (dados.riscoIntegrado > 50 && dados.riscoIntegrado <= 80) {
-          nivelLog = 'WARNING';
-          mensagemLog = 'Dados recebidos - atenção necessária (risco moderado)';
-        } else if (dados.riscoIntegrado > 80) {
-          nivelLog = 'CRITICAL';
-          mensagemLog = 'Dados recebidos - situação crítica (risco alto)';
+        if (dados.riscoIntegrado <= 0.50) {
+          nivelLog    = 'INFO';
+          mensagemLog = `Dados recebidos — situação NORMAL (risco ${(dados.riscoIntegrado * 100).toFixed(0)}%)`;
+        } else if (dados.riscoIntegrado <= 0.80) {
+          nivelLog    = 'WARNING';
+          mensagemLog = `Dados recebidos — ATENÇÃO necessária (risco ${(dados.riscoIntegrado * 100).toFixed(0)}%)`;
+        } else {
+          nivelLog    = 'CRITICAL';
+          mensagemLog = `Dados recebidos — situação CRÍTICA (risco ${(dados.riscoIntegrado * 100).toFixed(0)}%)`;
         }
+      }
+
+      // Log complementar para ruptura detectada pelo nivelAlerta
+      if (dados.nivelAlerta === 'VERMELHO' && dados.riscoIntegrado >= 1.0) {
+        mensagemLog = `⛔ RUPTURA detectada — umidade ${dados.umidadeSolo?.toFixed(1) ?? '?'}% acima do limiar crítico`;
+        nivelLog    = 'CRITICAL';
       }
 
       // Log da operação
       await this.salvarLog({
-        nivel: nivelLog,
+        nivel:      nivelLog,
         componente: 'SENSOR',
-        mensagem: mensagemLog,
+        mensagem:   mensagemLog,
         dadosExtras: {
           leituraId:    novaLeitura.id,
           risco:        dados.riscoIntegrado,
+          indiceRisco:  dados.indiceRisco,
           nivel:        dados.nivelAlerta,
           amplificado:  dados.amplificado,
           statusBndmet: dados.statusApiBndmet,
@@ -113,13 +128,13 @@ export class SensorService {
 
       return novaLeitura;
     } catch (error) {
-      console.error('Erro ao salvar dados do sensor:', error);
+      console.error('❌ Erro ao salvar dados do sensor:', error);
 
       await this.salvarLog({
-        nivel: 'ERROR',
+        nivel:      'ERROR',
         componente: 'SENSOR',
-        mensagem: 'Erro ao salvar dados do sensor',
-        dadosExtras: { error: error.message, dados },
+        mensagem:   'Erro ao salvar dados do sensor',
+        dadosExtras: { error: (error as Error).message, dados },
       });
 
       throw error;
@@ -130,7 +145,7 @@ export class SensorService {
   static async buscarUltimasLeituras(limite: number = 100) {
     try {
       return await prisma.leiturasSensor.findMany({
-        take: limite,
+        take:    limite,
         orderBy: { timestamp: 'desc' },
       });
     } catch (error) {
@@ -147,14 +162,13 @@ export class SensorService {
     limite: number = 50
   ) {
     try {
-      const skip = (pagina - 1) * limite;
-
+      const skip      = (pagina - 1) * limite;
       const inicioUTC = new Date(dataInicio.toISOString());
-      const fimUTC = new Date(dataFim.toISOString());
+      const fimUTC    = new Date(dataFim.toISOString());
 
       const [leituras, total] = await Promise.all([
         prisma.leiturasSensor.findMany({
-          where: { timestamp: { gte: inicioUTC, lte: fimUTC } },
+          where:   { timestamp: { gte: inicioUTC, lte: fimUTC } },
           orderBy: { timestamp: 'desc' },
           skip,
           take: limite,
@@ -179,16 +193,15 @@ export class SensorService {
     limite: number = 50
   ) {
     try {
-      const skip = (pagina - 1) * limite;
-
+      const skip          = (pagina - 1) * limite;
       const dataInicioStr = dataInicio.split('T')[0];
       const dataFimStr    = dataFim.split('T')[0];
 
-      console.log('Buscando registros por data brasileira:', {
+      console.log('🗓 Buscando registros por data brasileira:', {
         dataInicio: dataInicioStr,
-        dataFim: dataFimStr,
+        dataFim:    dataFimStr,
         pagina,
-        limite
+        limite,
       });
 
       const idsResult = await prisma.$queryRaw`
@@ -206,14 +219,14 @@ export class SensorService {
       const idsPaginados = ids.slice(skip, skip + limite);
 
       const leituras = await prisma.leiturasSensor.findMany({
-        where: { id: { in: idsPaginados } },
+        where:   { id: { in: idsPaginados } },
         orderBy: { timestamp: 'desc' },
       });
 
-      console.log('Resultado da busca híbrida:', {
-        totalEncontrado: total,
+      console.log('✅ Resultado da busca híbrida:', {
+        totalEncontrado:     total,
         registrosRetornados: leituras.length,
-        range: `${dataInicioStr} até ${dataFimStr}`
+        range: `${dataInicioStr} até ${dataFimStr}`,
       });
 
       return { leituras, total };
@@ -233,7 +246,7 @@ export class SensorService {
       return await prisma.leiturasSensor.findMany({
         where,
         orderBy: { timestamp: 'desc' },
-        take: limite,
+        take:    limite,
       });
     } catch (error) {
       console.error('❌ Erro ao buscar alertas:', error);
@@ -244,39 +257,44 @@ export class SensorService {
   // Estatísticas gerais
   static async obterEstatisticas() {
     try {
-      const [totalLeituras, ultimaLeitura, estatisticas24h, alertasCriticos, statusBndmet] =
-        await Promise.all([
-          prisma.leiturasSensor.count(),
+      const [
+        totalLeituras,
+        ultimaLeitura,
+        estatisticas24h,
+        alertasCriticos,
+        statusBndmet,
+      ] = await Promise.all([
+        prisma.leiturasSensor.count(),
 
-          prisma.leiturasSensor.findFirst({
-            orderBy: { timestamp: 'desc' },
-          }),
+        prisma.leiturasSensor.findFirst({
+          orderBy: { timestamp: 'desc' },
+        }),
 
-          prisma.leiturasSensor.aggregate({
-            where: { timestamp: { gte: this.getUTCPeriod(24) } },
-            _avg: {
-              umidadeSolo:    true,
-              riscoIntegrado: true,
-              indiceRisco:    true,
-              precipitacao24h: true,
-              temperatura:    true,
-            },
-            _count: true,
-          }),
+        prisma.leiturasSensor.aggregate({
+          where: { timestamp: { gte: this.getUTCPeriod(24) } },
+          _avg: {
+            umidadeSolo:     true,
+            riscoIntegrado:  true,
+            indiceRisco:     true,
+            precipitacao24h: true,
+            temperatura:     true,
+          },
+          _count: true,
+        }),
 
-          prisma.leiturasSensor.count({
-            where: {
-              nivelAlerta: { in: ['CRÍTICO', 'ALTO', 'VERMELHO'] },
-              timestamp:   { gte: this.getUTCPeriod(24) },
-            },
-          }),
+        prisma.leiturasSensor.count({
+          where: {
+            nivelAlerta: { in: ['VERMELHO'] },
+            timestamp:   { gte: this.getUTCPeriod(24) },
+          },
+        }),
 
-          prisma.leiturasSensor.groupBy({
-            by: ['statusApiBndmet'],
-            where: { timestamp: { gte: this.getUTCPeriod(1) } },
-            _count: true,
-          }),
-        ]);
+        prisma.leiturasSensor.groupBy({
+          by:    ['statusApiBndmet'],
+          where: { timestamp: { gte: this.getUTCPeriod(1) } },
+          _count: true,
+        }),
+      ]);
 
       return {
         totalLeituras,
@@ -310,7 +328,7 @@ export class SensorService {
         },
       });
     } catch (error) {
-      console.error('Erro ao salvar log:', error);
+      console.error('❌ Erro ao salvar log:', error);
     }
   }
 
@@ -324,7 +342,7 @@ export class SensorService {
       return await prisma.logsSistema.findMany({
         where,
         orderBy: { timestamp: 'desc' },
-        take: limite,
+        take:    limite,
       });
     } catch (error) {
       console.error('❌ Erro ao buscar logs:', error);
@@ -336,19 +354,19 @@ export class SensorService {
   static async buscarDadosTendencia(periodo: number = 168) {
     try {
       return await prisma.leiturasSensor.findMany({
-        where: { timestamp: { gte: this.getUTCPeriod(periodo) } },
+        where:  { timestamp: { gte: this.getUTCPeriod(periodo) } },
         select: {
-          timestamp:          true,
-          umidadeSolo:        true,
-          precipitacao24h:    true,
-          precipitacao7d:     true,
-          riscoIntegrado:     true,
-          indiceRisco:        true,
-          nivelAlerta:        true,
-          temperatura:        true,
-          pressaoAtmosferica: true,
-          amplificado:        true,
-          chuvaFutura24h:     true,
+          timestamp:           true,
+          umidadeSolo:         true,
+          precipitacao24h:     true,
+          precipitacao7d:      true,
+          riscoIntegrado:      true,
+          indiceRisco:         true,
+          nivelAlerta:         true,
+          temperatura:         true,
+          pressaoAtmosferica:  true,
+          amplificado:         true,
+          chuvaFutura24h:      true,
           intensidadePrevisao: true,
         },
         orderBy: { timestamp: 'asc' },
@@ -376,11 +394,11 @@ export class SensorService {
 
       if (!ultimaLeitura) {
         return {
-          status: 'offline',
+          status:        'offline',
           ultimaLeitura: null,
-          wifi: false,
-          bndmet: 'desconhecido',
-          sensor: false,
+          wifi:          false,
+          bndmet:        'desconhecido',
+          sensor:        false,
         };
       }
 
@@ -414,7 +432,7 @@ export class SensorService {
           confiabilidade:       true,
         },
         _count: {
-          sensorOk:       true,
+          sensorOk:        true,
           statusApiBndmet: true,
         },
       });
@@ -434,11 +452,11 @@ export class SensorService {
       });
 
       return {
-        qualidadeMediaBndmet:    resultado._avg.qualidadeDadosBndmet,
-        confiabilidadeMedia:     resultado._avg.confiabilidade,
-        percentualSensorOk:      (sensorOkCount / resultado._count.sensorOk) * 100,
-        percentualApiBndmetOk:   (apiBndmetOkCount / resultado._count.statusApiBndmet) * 100,
-        totalLeituras:           resultado._count.sensorOk,
+        qualidadeMediaBndmet:   resultado._avg.qualidadeDadosBndmet,
+        confiabilidadeMedia:    resultado._avg.confiabilidade,
+        percentualSensorOk:     (sensorOkCount    / resultado._count.sensorOk)         * 100,
+        percentualApiBndmetOk:  (apiBndmetOkCount / resultado._count.statusApiBndmet)  * 100,
+        totalLeituras:          resultado._count.sensorOk,
       };
     } catch (error) {
       console.error('❌ Erro ao analisar qualidade dos dados:', error);

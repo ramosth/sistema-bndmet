@@ -13,7 +13,7 @@ export const env = {
 
   // JWT Configuration
   JWT_SECRET: process.env.JWT_SECRET!,
-  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '24h',
   
   // CORS Configuration
   CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:3001',

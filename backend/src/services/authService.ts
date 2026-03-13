@@ -39,13 +39,19 @@ export class AuthService {
       };
 
       const secretKey = env.JWT_SECRET;
-      const options = { expiresIn: '7d' } as jwt.SignOptions;
+      const options = { expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions;
 
       const token = jwt.sign(payload, secretKey, options);
 
       // Salvar sessão
+      // Calcular expiresAt com base no JWT_EXPIRES_IN do env
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // 7 dias
+      const expiresIn = env.JWT_EXPIRES_IN; // ex.: '24h', '7d', '30m'
+      const unit = expiresIn.slice(-1);
+      const value = parseInt(expiresIn.slice(0, -1));
+      if (unit === 'h') expiresAt.setHours(expiresAt.getHours() + value);
+      else if (unit === 'd') expiresAt.setDate(expiresAt.getDate() + value);
+      else if (unit === 'm') expiresAt.setMinutes(expiresAt.getMinutes() + value);
 
       await prisma.sessoesUsuario.create({
         data: {
