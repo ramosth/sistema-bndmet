@@ -543,58 +543,6 @@ router.get('/estatisticas-usuarios', AuthController.obterEstatisticasUsuarios);
  */
 router.post('/enviar-alerta', validarEnviarAlerta, AuthController.enviarAlertaMassa);
 
-/**
- * @swagger
- * /auth/limpar-tokens-expirados:
- *   post:
- *     tags: [Autenticação]
- *     summary: Limpar tokens expirados
- *     description: Remove tokens de reset expirados (manutenção)
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Tokens removidos com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     tokensLimpos:
- *                       type: integer
- *                       example: 5
- *       403:
- *         $ref: '#/components/responses/ForbiddenError'
- */
-router.post('/limpar-tokens-expirados', AuthController.limparTokensExpirados);
-
-/**
- * @swagger
- * /auth/limpar-sessoes-expiradas:
- *   post:
- *     tags: [Autenticação]
- *     summary: Limpar sessões expiradas
- *     description: Remove sessões de login expiradas (manutenção)
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Sessões removidas com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
- *       403:
- *         $ref: '#/components/responses/ForbiddenError'
- */
-router.post('/limpar-sessoes-expiradas', AuthController.limparSessoesExpiradas);
-
 // ========== ROTAS SUPER ADMIN ==========
 
 /**

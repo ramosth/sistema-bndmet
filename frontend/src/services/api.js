@@ -27,7 +27,7 @@ api.interceptors.request.use((config) => {
       data: config.data
     });
   }
-
+  
   return config;
 });
 
@@ -47,69 +47,67 @@ api.interceptors.response.use(
         message: error.message
       });
     }
-
+    
     if (error.response?.status === 401) {
       // Apenas limpar tokens, mas não redirecionar
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
-
+    
     return Promise.reject(error);
   }
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Serviços de autenticação
-// ─────────────────────────────────────────────────────────────────────────────
+// Serviços de autenticação
 export const authService = {
   login: async (email, senha) => {
     const response = await api.post('/auth/login', { email, senha });
     return response.data;
   },
-
+  
   logout: async () => {
     try {
       const response = await api.post('/auth/logout');
       return response.data;
     } catch (error) {
+      // Mesmo com erro, limpar dados locais
       return { success: true };
     } finally {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
   },
-
+  
   getProfile: async () => {
     const response = await api.get('/auth/perfil');
     return response.data;
   },
-
+  
   changePassword: async (senhaAtual, novaSenha) => {
     const response = await api.put('/auth/alterar-senha', { senhaAtual, novaSenha, confirmarSenha: novaSenha });
     return response.data;
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Serviços de usuários
-// ─────────────────────────────────────────────────────────────────────────────
+// Serviços de usuários
 export const userService = {
   getBasicUsers: async (params = {}) => {
     const response = await api.get('/auth/usuarios-basicos', { params });
     return response.data;
   },
-
+  
   getAdminUsers: async (params = {}) => {
     const response = await api.get('/auth/usuarios-admin', { params });
     return response.data;
   },
-
+  
   getUserStats: async () => {
     const response = await api.get('/auth/estatisticas-usuarios');
     return response.data;
   },
-
+  
   createBasicUser: async (userData) => {
+    // Ajustar campos para a API
     const apiData = {
       nome: userData.nome,
       email: userData.email,
@@ -123,8 +121,9 @@ export const userService = {
     const response = await api.post('/auth/cadastro-basico', apiData);
     return response.data;
   },
-
+  
   createAdminUser: async (userData) => {
+    // Ajustar campos para a API
     const apiData = {
       nome: userData.nome,
       email: userData.email,
@@ -186,76 +185,63 @@ export const userService = {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Serviços de sensores
-// ─────────────────────────────────────────────────────────────────────────────
+// Serviços de sensores
 export const sensorService = {
   getLatestReadings: async (limite = 100) => {
     const response = await api.get('/sensor/ultimas', { params: { limite } });
     return response.data;
   },
-
+  
   getReadingsByPeriod: async (dataInicio, dataFim, pagina = 1, limite = 50) => {
     const response = await api.get('/sensor/periodo', {
       params: { dataInicio, dataFim, pagina, limite }
     });
     return response.data;
   },
-
+  
   getAlerts: async (limite = 50) => {
     const response = await api.get('/sensor/alertas', { params: { limite } });
     return response.data;
   },
-
-  getStatistics: async (periodo = 24) => {
-    const response = await api.get('/sensor/estatisticas', { params: { periodo } });
+  
+  getStatistics: async () => {
+    const response = await api.get('/sensor/estatisticas');
     return response.data;
   },
-
+  
   getLogs: async (nivel, componente, limite = 100) => {
     const params = { limite };
     if (nivel) params.nivel = nivel;
     if (componente) params.componente = componente;
+    
     const response = await api.get('/sensor/logs', { params });
     return response.data;
   },
-
+  
   sendData: async (sensorData) => {
     const response = await api.post('/sensor/dados', sensorData);
     return response.data;
   },
 
-  // Ajuste #29: expor endpoint de qualidade dedicado
-  // GET /sensor/qualidade — retorna qualidadeMediaBndmet, confiabilidadeMedia,
-  // percentualSensorOk, percentualApiBndmetOk, registrosPreNTP
+  // Status do sistema — retorna { sistema: { status: 'online'/'offline', ... } }
+  // Usado pelo hook useRealTimeData para alimentar o SystemStatus do Dashboard
+  getStatus: async () => {
+    const response = await api.get('/sensor/status');
+    return response.data;
+  },
+
   getQualidade: async (periodo = 24) => {
     const response = await api.get('/sensor/qualidade', { params: { periodo } });
     return response.data;
   },
 
-  // Ajuste #30: expor estatísticas de ruptura do sensorService v4
-  // Retorna: totalEventos, emRupturaAgora, aguardandoResetAgora,
-  //          ultimaRuptura, duracaoMediaMinutos
-  // Nota: este endpoint usa GET /sensor/estatisticas com período longo
-  // e extrai os dados de ruptura do retorno completo
   getEstatisticasRuptura: async (periodo = 168) => {
-    const response = await api.get('/sensor/estatisticas', { params: { periodo } });
-    return response.data;
-  },
-
-  // Status completo da API + conectividade + estatísticas
-  // Retorna: { api: {...}, sistema: {...}, estatisticas: {...} }
-  // sistema contém: status, wifi, bndmet, sensor, bndmetInicializado,
-  //                 aguardandoReset, minutosUltimaLeitura, qualidadeBndmet, estacao
-  getStatus: async () => {
-    const response = await api.get('/sensor/status');
+    const response = await api.get('/sensor/ruptura', { params: { periodo } });
     return response.data;
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Serviços de alertas
-// ─────────────────────────────────────────────────────────────────────────────
+// Serviços de alertas
 export const alertService = {
   enviarAlertaMassa: async (alertData) => {
     console.log('📢 Enviando alerta em massa:', alertData);
@@ -264,44 +250,31 @@ export const alertService = {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Serviços do sistema
-// ─────────────────────────────────────────────────────────────────────────────
+// Serviços do sistema
 export const systemService = {
   getHealth: async () => {
     const response = await api.get('/health');
     return response.data;
   },
-
-  cleanExpiredTokens: async () => {
-    const response = await api.post('/auth/limpar-tokens-expirados');
-    return response.data;
-  },
-
-  cleanExpiredSessions: async () => {
-    const response = await api.post('/auth/limpar-sessoes-expiradas');
-    return response.data;
-  }
+  
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Utilitários de API
-// ─────────────────────────────────────────────────────────────────────────────
+// Utilitários de API
 export const apiUtils = {
   // Função para tratar erros de forma consistente
   handleError: (error, defaultMessage = 'Erro na operação') => {
-    const message = error.response?.data?.message ||
-                   error.response?.data?.error ||
-                   error.message ||
+    const message = error.response?.data?.message || 
+                   error.response?.data?.error || 
+                   error.message || 
                    defaultMessage;
-
+    
     console.error('API Error:', {
       url: error.config?.url,
       method: error.config?.method,
       status: error.response?.status,
       message
     });
-
+    
     return message;
   },
   

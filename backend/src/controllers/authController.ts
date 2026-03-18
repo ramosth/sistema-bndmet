@@ -179,30 +179,6 @@ export class AuthController {
     }
   }
 
-  // ========== MANUTENÇÃO ==========
-
-  // Limpar tokens expirados (rota administrativa)
-  static async limparTokensExpirados(req: Request, res: Response) {
-    try {
-      const resultado = await AuthService.limparTokensExpirados();
-      return sendSuccess(res, resultado, `${resultado.tokensLimpos} tokens expirados removidos`);
-    } catch (error: any) {
-      console.error('Erro ao limpar tokens:', error);
-      return sendError(res, error.message || 'Erro interno do servidor', 500);
-    }
-  }
-
-  // Limpar sessões expiradas (rota administrativa)
-  static async limparSessoesExpiradas(req: Request, res: Response) {
-    try {
-      const resultado = await AuthService.limparSessoesExpiradas();
-      return sendSuccess(res, resultado, 'Sessões expiradas removidas');
-    } catch (error: any) {
-      console.error('Erro ao limpar sessões:', error);
-      return sendError(res, error.message || 'Erro interno do servidor', 500);
-    }
-  }
-
   // ========== GESTÃO DE USUÁRIOS ==========
 
   // Listar usuários básicos

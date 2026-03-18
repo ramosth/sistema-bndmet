@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { userService, authService, systemService } from '@/services/api';
+import { userService, authService } from '@/services/api';
 import { useForm } from 'react-hook-form';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -78,7 +78,6 @@ export default function SettingsContent() {
   const [loading,              setLoading]              = useState(false);
   const [healthData,           setHealthData]           = useState(null);
   const [loadingHealth,        setLoadingHealth]        = useState(false);
-  const [lastMaintenance,      setLastMaintenance]      = useState({});
 
   const { user, updateUser, isSuperAdmin } = useAuth();
 
@@ -108,7 +107,7 @@ export default function SettingsContent() {
   const loadHealth = async () => {
     setLoadingHealth(true);
     try {
-      const res = await systemService.getHealth();
+      const res = await (await import('@/services/api')).systemService.getHealth();
       setHealthData(res.data || res);
     } catch { setHealthData(null); }
     finally { setLoadingHealth(false); }
@@ -168,33 +167,6 @@ export default function SettingsContent() {
     } catch (error) {
       toast.error(error.response?.data?.message || 'Erro ao alterar senha');
     } finally { setLoading(false); }
-  };
-
-  // ── Manutenção ────────────────────────────────────────────────────────────
-  const handleMaintenance = async (action) => {
-    setLoading(true);
-    try {
-      let response;
-      if (action === 'cleanup-tokens') {
-        response = await systemService.cleanExpiredTokens();
-        toast.success(`${response.data?.tokensLimpos ?? 0} tokens expirados removidos`);
-      } else if (action === 'cleanup-sessions') {
-        response = await systemService.cleanExpiredSessions();
-        toast.success('Sessões expiradas removidas com sucesso');
-      } else if (action === 'all') {
-        await systemService.cleanExpiredTokens();
-        await systemService.cleanExpiredSessions();
-        toast.success('Manutenção completa executada com sucesso');
-      }
-      setLastMaintenance(prev => ({ ...prev, [action]: new Date() }));
-    } catch { toast.error('Erro ao executar manutenção'); }
-    finally { setLoading(false); setShowMaintenanceModal(false); }
-  };
-
-  const fmtMaintenance = (action) => {
-    const ts = lastMaintenance[action];
-    if (!ts) return 'Nunca executado nesta sessão';
-    return `Última execução: ${ts.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`;
   };
 
   return (
@@ -314,33 +286,9 @@ export default function SettingsContent() {
         </div>
       </Section>
 
-      {/* ── Seção 4 + 5: Super Admin apenas ──────────────────────────── */}
+      {/* ── Seção 4: Super Admin apenas ──────────────────────────── */}
       {isSuperAdmin() && (
         <>
-          {/* Manutenção */}
-          <Section>
-            <SectionHeader icon={Trash2} title="Manutenção do Sistema" description="Operações de limpeza — executadas sob demanda pelo super administrador" iconColor="#dc2626" />
-
-            <ActionRow
-              icon={Trash2} iconColor="#6b7280"
-              title="Limpar Tokens Expirados"
-              description={`Remove tokens de reset de senha que já venceram. ${fmtMaintenance('cleanup-tokens')}`}
-              action={() => handleMaintenance('cleanup-tokens')}
-              actionLabel="Executar"
-              loading={loading}
-            />
-            <ActionRow
-              icon={Trash2} iconColor="#6b7280"
-              title="Limpar Sessões Expiradas"
-              description={`Remove registros de sessões JWT antigas do banco. ${fmtMaintenance('cleanup-sessions')}`}
-              action={() => handleMaintenance('cleanup-sessions')}
-              actionLabel="Executar"
-              loading={loading}
-              last
-            />
-
-          </Section>
-
           {/* Informações técnicas */}
           <Section>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>

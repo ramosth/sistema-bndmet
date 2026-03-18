@@ -240,27 +240,6 @@ export class AuthService {
     }
   }
 
-  // Limpar tokens expirados (executar periodicamente)
-  static async limparTokensExpirados() {
-    try {
-      const resultado = await prisma.usuariosAdmin.updateMany({
-        where: {
-          tokenResetExpira: {
-            lt: new Date() // Tokens expirados
-          }
-        },
-        data: {
-          tokenReset: null,
-          tokenResetExpira: null
-        }
-      });
-
-      return { tokensLimpos: resultado.count };
-    } catch (error) {
-      throw new Error('Erro ao limpar tokens expirados');
-    }
-  }
-
   // Criar usuário administrador
   static async criarUsuarioAdmin(dados: CadastroUsuarioAdminRequest) {
     try {
@@ -722,16 +701,6 @@ export class AuthService {
       });
 
       return true;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  // Limpar sessões expiradas
-  static async limparSessoesExpiradas() {
-    try {
-      const resultado = await prisma.$queryRaw`SELECT limpar_sessoes_expiradas()` as any[];
-      return resultado;
     } catch (error) {
       throw error;
     }
