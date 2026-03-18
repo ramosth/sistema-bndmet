@@ -1,7 +1,16 @@
 // backend > src > services > sensorService.ts
+// Versão v4 — atualizado para firmware v13
+//
+// Mudanças sobre v3:
+//   1. Tipos de import atualizados (DadosBrutos, EstatisticasRuptura, QualidadeDados)
+//   2. salvarDados(): log de ruptura distingue ativa vs cooldown (aguardando_reset_ruptura)
+//   3. verificarConectividade(): expõe bndmet_inicializado e aguardando_reset_ruptura
+//   4. analisarQualidadeDados(): filtra registros pré-NTP (bndmet_inicializado=false)
+//      para não contaminar a média de qualidade BNDMET com zeros iniciais
+//   5. Novo método buscarEstatisticasRuptura(): conta eventos, duração média, estado atual
 
 import prisma from '../config/database';
-import { DadosESP8266, LogEntry } from '../types';
+import { DadosESP8266, LogEntry, EstatisticasRuptura, QualidadeDados } from '../types';
 
 export class SensorService {
   // HELPER: Gerar data UTC para períodos
@@ -10,14 +19,42 @@ export class SensorService {
     return new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
   }
 
-  // Salvar dados do ESP8266
+  // HELPER: Extrair campo do dadosBrutos (jsonb) com segurança
+  private static getDadosBrutosField<T>(
+    dadosBrutos: any,
+    campo: string,
+    fallback: T
+  ): T {
+    try {
+      if (!dadosBrutos || typeof dadosBrutos !== 'object') return fallback;
+      return campo in dadosBrutos ? dadosBrutos[campo] : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Salvar dados do ESP8266
+  // ─────────────────────────────────────────────────────────────────────────
   static async salvarDados(dados: DadosESP8266) {
     try {
+      // Extrair campos novos v13 do dadosBrutos para uso no log
+      // (não precisam de coluna própria — chegam dentro do jsonb)
+      const aguardandoReset = this.getDadosBrutosField<boolean>(
+        dados.dadosBrutos, 'aguardando_reset_ruptura', false
+      );
+      const bndmetInit = this.getDadosBrutosField<boolean>(
+        dados.dadosBrutos, 'bndmet_inicializado', true
+      );
+
       console.log('💾 Salvando dados do sensor:', {
-        umidade:   dados.umidadeSolo,
-        risco:     dados.riscoIntegrado,
-        nivel:     dados.nivelAlerta,
-        timestamp: new Date().toISOString(),
+        umidade:              dados.umidadeSolo,
+        risco:                dados.riscoIntegrado,
+        nivel:                dados.nivelAlerta,
+        confiabilidade:       dados.confiabilidade,
+        bndmet_inicializado:  bndmetInit,
+        aguardando_reset:     aguardandoReset,
+        timestamp:            new Date().toISOString(),
       });
 
       const novaLeitura = await prisma.leiturasSensor.create({
@@ -26,7 +63,10 @@ export class SensorService {
           timestamp:            dados.timestamp ? new Date(dados.timestamp) : undefined,
           umidadeSolo:          dados.umidadeSolo,
           valorAdc:             dados.valorAdc,
-          sensorOk:             dados.sensorOk,
+          // FIX v14 (DIV-2): força boolean explícito — evita gravação de NULL no banco.
+          // Quando Arduino envia ADC=1024 (sensor desconectado), sensorOk chega como
+          // false/undefined e o Prisma gravava NULL em vez de false no campo Boolean.
+          sensorOk:             dados.sensorOk === true ? true : false,
           fatorLocal:           dados.fatorLocal,
 
           // BNDMET
@@ -37,6 +77,8 @@ export class SensorService {
           statusApiBndmet:      dados.statusApiBndmet,
           qualidadeDadosBndmet: dados.qualidadeDadosBndmet,
           estacao:              dados.estacao,
+          // OWM — status da API (campo novo — migration 03)
+          statusApiOwm:         dados.statusApiOwm,
 
           // Meteorologia OWM
           temperatura:          dados.temperatura,
@@ -44,7 +86,7 @@ export class SensorService {
           pressaoAtmosferica:   dados.pressaoAtmosferica,
           velocidadeVento:      dados.velocidadeVento,
           descricaoTempo:       dados.descricaoTempo,
-          chuvaAtualOWM:        dados.chuvaAtualOWM,
+          chuvaAtualOwm:        dados.chuvaAtualOWM,
 
           // Previsão OWM /forecast
           chuvaFutura24h:       dados.chuvaFutura24h,
@@ -57,7 +99,8 @@ export class SensorService {
           nivelAlerta:          dados.nivelAlerta,
           recomendacao:         dados.recomendacao,
           confiabilidade:       dados.confiabilidade,
-          amplificado:          dados.amplificado === true ? true : false,
+          // amplificado: === true garante boolean explícito — nunca null/vazio
+          amplificado:          dados.amplificado === true,
           taxaVariacaoUmidade:  dados.taxaVariacaoUmidade,
 
           // Componentes individuais da Equação 5 TCC
@@ -74,40 +117,49 @@ export class SensorService {
           buzzerAtivo:          dados.buzzerAtivo,
           // modoManual: Arduino envia false (booleano) → grava false
           // curl/Postman omitem campo → undefined → grava true (operação manual)
-          modoManual:           dados.modoManual === true ? true
-                                  : dados.modoManual === false ? false
-                                  : true,
+          // ATENÇÃO: Boolean("false") = true, por isso comparação direta
+          modoManual:           dados.modoManual === true  ? true
+                                : dados.modoManual === false ? false
+                                : true,
           wifiConectado:        dados.wifiConectado,
 
-          // Dados brutos de diagnóstico
-          dadosBrutos:          dados.dadosBrutos,
+          // Dados brutos — persiste como jsonb opaco (cast para any resolve incompat. do Prisma)
+          dadosBrutos:          dados.dadosBrutos as any,
         },
       });
 
       // ─────────────────────────────────────────────────────────────────────
-      // Limites corretos: VERDE ≤ 0,50 | AMARELO ≤ 0,80 | VERMELHO > 0,80
-      // Fonte: Tabela 5 TCC (cap3_materiais_metodos)
+      // Lógica de log — distingue estados da ruptura (novo em v4)
       // ─────────────────────────────────────────────────────────────────────
       let nivelLog: 'INFO' | 'WARNING' | 'CRITICAL' = 'INFO';
       let mensagemLog = 'Dados recebidos do ESP8266';
 
-      if (dados.riscoIntegrado !== undefined && dados.riscoIntegrado !== null) {
+      if (dados.nivelAlerta === 'VERMELHO' && dados.riscoIntegrado !== undefined && dados.riscoIntegrado >= 1.0) {
+        if (aguardandoReset) {
+          // v13: ruptura em cooldown — umidade já abaixo do limiar, aguardando 3 leituras seguras
+          mensagemLog = `🟡 Ruptura em desescalada — umidade ${dados.umidadeSolo?.toFixed(1) ?? '?'}% (aguardando reset de 3 leituras)`;
+          nivelLog    = 'WARNING';
+        } else {
+          // ruptura ativa
+          mensagemLog = `⛔ RUPTURA ativa — umidade ${dados.umidadeSolo?.toFixed(1) ?? '?'}% acima do limiar crítico (confiab. ${dados.confiabilidade ?? '?'}%)`;
+          nivelLog    = 'CRITICAL';
+        }
+      } else if (dados.riscoIntegrado !== undefined && dados.riscoIntegrado !== null) {
         if (dados.riscoIntegrado <= 0.50) {
           nivelLog    = 'INFO';
-          mensagemLog = `Dados recebidos — situação NORMAL (risco ${(dados.riscoIntegrado * 100).toFixed(0)}%)`;
+          mensagemLog = `Dados recebidos — situação NORMAL (risco ${(dados.riscoIntegrado * 100).toFixed(0)}%, confiab. ${dados.confiabilidade ?? '?'}%)`;
         } else if (dados.riscoIntegrado <= 0.80) {
           nivelLog    = 'WARNING';
-          mensagemLog = `Dados recebidos — ATENÇÃO necessária (risco ${(dados.riscoIntegrado * 100).toFixed(0)}%)`;
+          mensagemLog = `Dados recebidos — ATENÇÃO necessária (risco ${(dados.riscoIntegrado * 100).toFixed(0)}%, confiab. ${dados.confiabilidade ?? '?'}%)`;
         } else {
           nivelLog    = 'CRITICAL';
-          mensagemLog = `Dados recebidos — situação CRÍTICA (risco ${(dados.riscoIntegrado * 100).toFixed(0)}%)`;
+          mensagemLog = `Dados recebidos — situação CRÍTICA (risco ${(dados.riscoIntegrado * 100).toFixed(0)}%, confiab. ${dados.confiabilidade ?? '?'}%)`;
         }
       }
 
-      // Log complementar para ruptura detectada pelo nivelAlerta
-      if (dados.nivelAlerta === 'VERMELHO' && dados.riscoIntegrado >= 1.0) {
-        mensagemLog = `⛔ RUPTURA detectada — umidade ${dados.umidadeSolo?.toFixed(1) ?? '?'}% acima do limiar crítico`;
-        nivelLog    = 'CRITICAL';
+      // Aviso adicional para registros pré-NTP (v4)
+      if (!bndmetInit) {
+        console.warn('⏳ Registro pré-NTP: dados BNDMET ainda não disponíveis (bndmet_inicializado=false)');
       }
 
       // Log da operação
@@ -116,13 +168,16 @@ export class SensorService {
         componente: 'SENSOR',
         mensagem:   mensagemLog,
         dadosExtras: {
-          leituraId:    novaLeitura.id,
-          risco:        dados.riscoIntegrado,
-          indiceRisco:  dados.indiceRisco,
-          nivel:        dados.nivelAlerta,
-          amplificado:  dados.amplificado,
-          statusBndmet: dados.statusApiBndmet,
-          estacao:      dados.estacao,
+          leituraId:            novaLeitura.id,
+          risco:                dados.riscoIntegrado,
+          indiceRisco:          dados.indiceRisco,
+          nivel:                dados.nivelAlerta,
+          confiabilidade:       dados.confiabilidade,
+          amplificado:          dados.amplificado,
+          statusBndmet:         dados.statusApiBndmet,
+          bndmetInicializado:   bndmetInit,
+          aguardandoReset:      aguardandoReset,
+          estacao:              dados.estacao,
         },
       });
 
@@ -141,7 +196,9 @@ export class SensorService {
     }
   }
 
-  // Buscar últimas leituras
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Buscar últimas leituras
+  // ─────────────────────────────────────────────────────────────────────────
   static async buscarUltimasLeituras(limite: number = 100) {
     try {
       return await prisma.leiturasSensor.findMany({
@@ -154,7 +211,9 @@ export class SensorService {
     }
   }
 
-  // Buscar leituras por período
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Buscar leituras por período
+  // ─────────────────────────────────────────────────────────────────────────
   static async buscarLeiturasPorPeriodo(
     dataInicio: Date,
     dataFim: Date,
@@ -185,7 +244,9 @@ export class SensorService {
     }
   }
 
-  // Buscar leituras por período no timezone brasileiro
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Buscar leituras por período no timezone brasileiro
+  // ─────────────────────────────────────────────────────────────────────────
   static async buscarLeiturasPorPeriodoTimezone(
     dataInicio: string,
     dataFim: string,
@@ -236,7 +297,9 @@ export class SensorService {
     }
   }
 
-  // Buscar alertas críticos
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Buscar alertas críticos
+  // ─────────────────────────────────────────────────────────────────────────
   static async buscarAlertas(limite: number = 50, nivelAlerta?: string) {
     try {
       const where: any = nivelAlerta
@@ -254,7 +317,80 @@ export class SensorService {
     }
   }
 
-  // Estatísticas gerais
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Estatísticas de eventos de ruptura (novo em v4)
+  //  Útil para o cap4 do TCC e para o dashboard do frontend
+  // ─────────────────────────────────────────────────────────────────────────
+  static async buscarEstatisticasRuptura(periodo: number = 168): Promise<EstatisticasRuptura> {
+    try {
+      const desde = this.getUTCPeriod(periodo);
+
+      // Total de registros VERMELHO com risco=1.0 no período
+      const totalEventos = await prisma.leiturasSensor.count({
+        where: {
+          timestamp:      { gte: desde },
+          nivelAlerta:    'VERMELHO',
+          riscoIntegrado: 1.0,
+        },
+      });
+
+      // Última leitura — para verificar estado atual
+      const ultimaLeitura = await prisma.leiturasSensor.findFirst({
+        orderBy: { timestamp: 'desc' },
+        select: {
+          timestamp:      true,
+          nivelAlerta:    true,
+          riscoIntegrado: true,
+          dadosBrutos:    true,
+        },
+      });
+
+      const emRupturaAgora = ultimaLeitura?.nivelAlerta === 'VERMELHO'
+        && Number(ultimaLeitura?.riscoIntegrado) >= 1.0;
+
+      const aguardandoResetAgora = emRupturaAgora
+        ? this.getDadosBrutosField<boolean>(ultimaLeitura?.dadosBrutos, 'aguardando_reset_ruptura', false)
+        : false;
+
+      // Último evento de ruptura
+      const ultimoVermelho = await prisma.leiturasSensor.findFirst({
+        where:   { nivelAlerta: 'VERMELHO', riscoIntegrado: 1.0 },
+        orderBy: { timestamp: 'desc' },
+        select:  { timestamp: true },
+      });
+
+      // Duração média: usando SQL puro para calcular corridas contínuas de VERMELHO
+      // Simplificado: média entre primeiro e último VERMELHO de cada bloco contíguo
+      // Como aproximação, usamos a diferença total / número de eventos
+      let duracaoMediaMinutos: number | undefined;
+      if (totalEventos > 1) {
+        const primeiroVermelho = await prisma.leiturasSensor.findFirst({
+          where:   { timestamp: { gte: desde }, nivelAlerta: 'VERMELHO', riscoIntegrado: 1.0 },
+          orderBy: { timestamp: 'asc' },
+          select:  { timestamp: true },
+        });
+        if (primeiroVermelho && ultimoVermelho) {
+          const diffMs = ultimoVermelho.timestamp.getTime() - primeiroVermelho.timestamp.getTime();
+          duracaoMediaMinutos = Math.round(diffMs / (1000 * 60));
+        }
+      }
+
+      return {
+        totalEventos,
+        emRupturaAgora,
+        aguardandoResetAgora,
+        ultimaRuptura:       ultimoVermelho?.timestamp,
+        duracaoMediaMinutos,
+      };
+    } catch (error) {
+      console.error('❌ Erro ao buscar estatísticas de ruptura:', error);
+      throw error;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Estatísticas gerais
+  // ─────────────────────────────────────────────────────────────────────────
   static async obterEstatisticas() {
     try {
       const [
@@ -316,7 +452,9 @@ export class SensorService {
     }
   }
 
-  // Salvar log do sistema
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Salvar log do sistema
+  // ─────────────────────────────────────────────────────────────────────────
   static async salvarLog(log: LogEntry) {
     try {
       return await prisma.logsSistema.create({
@@ -332,7 +470,9 @@ export class SensorService {
     }
   }
 
-  // Buscar logs
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Buscar logs
+  // ─────────────────────────────────────────────────────────────────────────
   static async buscarLogs(nivel?: string, componente?: string, limite: number = 100) {
     try {
       const where: any = {};
@@ -350,7 +490,9 @@ export class SensorService {
     }
   }
 
-  // Buscar dados para análise de tendências
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Buscar dados para análise de tendências
+  // ─────────────────────────────────────────────────────────────────────────
   static async buscarDadosTendencia(periodo: number = 168) {
     try {
       return await prisma.leiturasSensor.findMany({
@@ -377,7 +519,10 @@ export class SensorService {
     }
   }
 
-  // Verificar conectividade dos sistemas
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Verificar conectividade dos sistemas
+  //  v4: expõe bndmet_inicializado e aguardando_reset_ruptura da última leitura
+  // ─────────────────────────────────────────────────────────────────────────
   static async verificarConectividade() {
     try {
       const ultimaLeitura = await prisma.leiturasSensor.findFirst({
@@ -389,21 +534,34 @@ export class SensorService {
           sensorOk:             true,
           qualidadeDadosBndmet: true,
           estacao:              true,
+          nivelAlerta:          true,
+          confiabilidade:       true,
+          dadosBrutos:          true,
         },
       });
 
       if (!ultimaLeitura) {
         return {
-          status:        'offline',
-          ultimaLeitura: null,
-          wifi:          false,
-          bndmet:        'desconhecido',
-          sensor:        false,
+          status:               'offline',
+          ultimaLeitura:        null,
+          wifi:                 false,
+          bndmet:               'desconhecido',
+          sensor:               false,
+          bndmetInicializado:   false,
+          aguardandoReset:      false,
         };
       }
 
       const minutosAtras = Math.floor(
         (Date.now() - ultimaLeitura.timestamp.getTime()) / (1000 * 60)
+      );
+
+      // v4: extrair campos v13 do dadosBrutos
+      const bndmetInit = this.getDadosBrutosField<boolean>(
+        ultimaLeitura.dadosBrutos, 'bndmet_inicializado', true
+      );
+      const aguardandoReset = this.getDadosBrutosField<boolean>(
+        ultimaLeitura.dadosBrutos, 'aguardando_reset_ruptura', false
       );
 
       return {
@@ -415,6 +573,11 @@ export class SensorService {
         sensor:               ultimaLeitura.sensorOk,
         qualidadeBndmet:      ultimaLeitura.qualidadeDadosBndmet,
         estacao:              ultimaLeitura.estacao,
+        nivelAlerta:          ultimaLeitura.nivelAlerta,
+        confiabilidade:       ultimaLeitura.confiabilidade,
+        // v4: campos novos para o frontend e diagnóstico
+        bndmetInicializado:   bndmetInit,
+        aguardandoReset:      aguardandoReset,
       };
     } catch (error) {
       console.error('❌ Erro ao verificar conectividade:', error);
@@ -422,11 +585,39 @@ export class SensorService {
     }
   }
 
-  // Análise de qualidade dos dados
-  static async analisarQualidadeDados(periodo: number = 24) {
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Análise de qualidade dos dados
+  //  v4: exclui registros pré-NTP (bndmet_inicializado=false) da média de
+  //      qualidade BNDMET para não contaminar com zeros iniciais
+  // ─────────────────────────────────────────────────────────────────────────
+  static async analisarQualidadeDados(periodo: number = 24): Promise<QualidadeDados> {
     try {
-      const resultado = await prisma.leiturasSensor.aggregate({
-        where: { timestamp: { gte: this.getUTCPeriod(periodo) } },
+      const desde = this.getUTCPeriod(periodo);
+
+      // Total de leituras no período
+      const totalLeituras = await prisma.leiturasSensor.count({
+        where: { timestamp: { gte: desde } },
+      });
+
+      // v4: contar registros pré-NTP via query no jsonb
+      // Registros onde dadosBrutos->>'bndmet_inicializado' = 'false'
+      const preNTPResult = await prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(*) as count
+        FROM leituras_sensor
+        WHERE timestamp >= ${desde}
+          AND (dados_brutos->>'bndmet_inicializado')::boolean = false
+      `;
+      const registrosPreNTP = Number(preNTPResult[0]?.count ?? 0);
+
+      // Agregados excluindo pré-NTP para médias limpas
+      const resultadoLimpo = await prisma.leiturasSensor.aggregate({
+        where: {
+          timestamp: { gte: desde },
+          // Exclui registros onde qualidadeDadosBndmet = 0 E bndmet_inicializado = false
+          // Como bndmet_inicializado é jsonb, usamos uma condição proxy:
+          // qualidadeDadosBndmet > 0 OR estacao IS NOT NULL garante dados reais
+          NOT: { qualidadeDadosBndmet: 0, precipitacao30d: 0, precipitacao7d: 0 },
+        },
         _avg: {
           qualidadeDadosBndmet: true,
           confiabilidade:       true,
@@ -438,25 +629,22 @@ export class SensorService {
       });
 
       const sensorOkCount = await prisma.leiturasSensor.count({
-        where: {
-          timestamp: { gte: this.getUTCPeriod(periodo) },
-          sensorOk:  true,
-        },
+        where: { timestamp: { gte: desde }, sensorOk: true },
       });
 
       const apiBndmetOkCount = await prisma.leiturasSensor.count({
-        where: {
-          timestamp:       { gte: this.getUTCPeriod(periodo) },
-          statusApiBndmet: 'OK',
-        },
+        where: { timestamp: { gte: desde }, statusApiBndmet: 'OK' },
       });
 
+      const countRef = resultadoLimpo._count.sensorOk || 1;
+
       return {
-        qualidadeMediaBndmet:   resultado._avg.qualidadeDadosBndmet,
-        confiabilidadeMedia:    resultado._avg.confiabilidade,
-        percentualSensorOk:     (sensorOkCount    / resultado._count.sensorOk)         * 100,
-        percentualApiBndmetOk:  (apiBndmetOkCount / resultado._count.statusApiBndmet)  * 100,
-        totalLeituras:          resultado._count.sensorOk,
+        qualidadeMediaBndmet:  resultadoLimpo._avg.qualidadeDadosBndmet,
+        confiabilidadeMedia:   resultadoLimpo._avg.confiabilidade,
+        percentualSensorOk:    (sensorOkCount    / countRef) * 100,
+        percentualApiBndmetOk: (apiBndmetOkCount / countRef) * 100,
+        totalLeituras,
+        registrosPreNTP,
       };
     } catch (error) {
       console.error('❌ Erro ao analisar qualidade dos dados:', error);

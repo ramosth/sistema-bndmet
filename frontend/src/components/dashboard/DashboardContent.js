@@ -1,30 +1,61 @@
-// Conteúdo principal do dashboard
+// Dashboard principal — Estrutura UX completa
 // ============= src/components/dashboard/DashboardContent.js =============
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRealTimeData } from '@/hooks';
 import { sensorService, userService } from '@/services/api';
-import { formatNumber } from '@/utils';
+import { formatDateBR } from '@/utils';
 import StatCard from './StatCard';
 import SensorChart from './SensorChart';
 import AlertsPanel from './AlertsPanel';
-import SystemStatus from './SystemStatus';
 import RecentActivity from './RecentActivity';
-import Card from '@/components/ui/Card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { Activity, Users, AlertTriangle, Shield, Droplets } from 'lucide-react';
+import {
+  Activity, AlertTriangle, Shield, Droplets,
+  Cloud, Zap, ThermometerSun, Wind, Gauge,
+} from 'lucide-react';
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+const fmt = (v, d = 1) => {
+  const x = parseFloat(v);
+  if (isNaN(x) || v == null) return '—';
+  return x.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+};
+
+const fmtRisco = (leitura) => {
+  if (leitura?.indiceRisco != null)    return parseFloat(leitura.indiceRisco);
+  if (leitura?.riscoIntegrado != null) return parseFloat(leitura.riscoIntegrado) * 100;
+  return 0;
+};
+
+const NIVEL = {
+  VERDE:    { label: '🟢 NORMAL',  color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+  AMARELO:  { label: '🟡 ATENÇÃO', color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+  VERMELHO: { label: '🔴 CRÍTICO', color: '#dc2626', bg: '#fef2f2', border: '#fca5a5' },
+  RUPTURA:  { label: '🚨 RUPTURA', color: '#7c3aed', bg: '#f5f3ff', border: '#c4b5fd' },
+};
+
+const DataRow = ({ label, value, highlight }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.25rem 0', borderBottom: '1px solid #f3f4f6' }}>
+    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{label}</span>
+    <span style={{ fontSize: '0.8rem', fontWeight: '600', color: highlight || '#374151' }}>{value}</span>
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Componente principal
+// ─────────────────────────────────────────────────────────────────────────────
 export default function DashboardContent() {
-  const [stats, setStats] = useState(null);
+  const [stats,      setStats]      = useState(null);
   const [sensorData, setSensorData] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { data: realTimeData, loading: realTimeLoading } = useRealTimeData(30000);
+  const [alerts,     setAlerts]     = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [lastUpdate,    setLastUpdate]    = useState(null);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  useEffect(() => { loadDashboardData(); }, []);
+
 
   const loadDashboardData = async () => {
     try {
@@ -32,17 +63,14 @@ export default function DashboardContent() {
         sensorService.getStatistics(),
         userService.getUserStats(),
         sensorService.getLatestReadings(50),
-        sensorService.getAlerts(10)
+        sensorService.getAlerts(10),
       ]);
-
-      setStats({
-        sensors: sensorStats.data,
-        users: userStats.data
-      });
+      setStats({ sensors: sensorStats.data, users: userStats.data });
       setSensorData(latestReadings.data || []);
       setAlerts(criticalAlerts.data || []);
+      setLastUpdate(new Date());
     } catch (error) {
-      console.error('Erro ao carregar dados do dashboard:', error);
+      console.error('Erro ao carregar dashboard:', error);
     } finally {
       setLoading(false);
     }
@@ -50,377 +78,238 @@ export default function DashboardContent() {
 
   if (loading) {
     return (
-      <div className="flex-center" style={{ height: '50vh' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <LoadingSpinner size="large" />
       </div>
     );
   }
 
-  const sensorStats = stats?.sensors?.geral?.estatisticas24h || {};
-  const ultimaLeitura = stats?.sensors?.geral?.ultimaLeitura || {};
-  const userStats = stats?.users || {};
-
-  // Calcular tendência das leituras (comparação simples)
-  const calcularTendencia = (atual, anterior) => {
-    if (!anterior || anterior === 0) return null;
-    const percentual = ((atual - anterior) / anterior * 100).toFixed(1);
-    return percentual > 0 ? `+${percentual}%` : `${percentual}%`;
-  };
+  // ── Dados derivados ──────────────────────────────────────────────────────
+  const sensorStats   = stats?.sensors?.geral?.estatisticas24h || {};
+  const ul            = stats?.sensors?.geral?.ultimaLeitura   || {};
+  const mediaRiscoPct = (parseFloat(sensorStats.mediaRisco) || 0) * 100;
+  const riscoAtual    = fmtRisco(ul);
+  const nivelKey      = ul.indiceRisco === 100 ? 'RUPTURA' : (ul.nivelAlerta || 'VERDE');
+  const nivel         = NIVEL[nivelKey] || NIVEL.VERDE;
 
   return (
     <div>
-      <div className="flex-between mb-4">
+
+      {/* ── Linha 1: Header ─────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h1 style={{ 
-            fontSize: '2rem', 
-            fontWeight: '700', 
-            color: 'var(--gray-800)',
-            margin: 0 
-          }}>
-            Dashboard
-          </h1>
-          <p style={{ 
-            color: 'var(--gray-600)', 
-            margin: '0.5rem 0 0 0' 
-          }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#111827', margin: 0 }}>Dashboard</h1>
+          <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0.2rem 0 0' }}>
             Monitoramento em tempo real da barragem
           </p>
         </div>
-        
-        <SystemStatus status={realTimeData?.system} />
+        {lastUpdate && (
+          <span style={{ fontSize: '0.75rem', color: '#9ca3af', alignSelf: 'flex-end' }}>
+            Atualizado às {lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Sao_Paulo' })}
+          </span>
+        )}
       </div>
 
-      {/* Cards de Estatísticas */}
-      <div className="grid grid-4 mb-4">
-        <StatCard
-          title="Leituras Hoje"
-          value={sensorStats.totalLeituras || 0}
-          icon={Activity}
-          color="var(--primary-blue)"
-          trend={calcularTendencia(sensorStats.totalLeituras, sensorStats.totalLeituras * 0.9)} // Simulação de tendência
-          status="normal"
-        />
-        
-        <StatCard
-          title="Umidade Média do Solo"
-          value={`${formatNumber(parseFloat(sensorStats.mediaUmidade) || 0)}%`}
-          icon={Droplets}
-          color="var(--terracotta)"
-          status={parseFloat(sensorStats.mediaUmidade) > 30 ? 'warning' : 'normal'}
-        />
-        
-        <StatCard
-          title="Risco Integrado"
-          value={`${formatNumber(parseFloat(sensorStats.mediaRisco) || 0)}%`}
-          icon={Shield}
-          color="var(--red-500)"
-          status={parseFloat(sensorStats.mediaRisco) > 50 ? 'critical' : 'normal'}
-        />
-        
-        <StatCard
-          title="Alertas Críticos"
-          value={sensorStats.alertasCriticos || 0}
-          icon={AlertTriangle}
-          color="var(--yellow-500)"
-          status={sensorStats.alertasCriticos > 0 ? 'warning' : 'normal'}
-        />
-      </div>
+      {/* ── Linha 2: Card situação atual ────────────────────────────── */}
+      {ul.id && (
+        <div style={{
+          padding: '1.25rem 1.5rem', backgroundColor: nivel.bg,
+          border: `2px solid ${nivel.border}`, borderRadius: '0.75rem', marginBottom: '1.25rem',
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '1.5rem', alignItems: 'start' }}>
 
-      <div className="grid grid-2 mb-4">
-        {/* Gráfico de Sensores */}
-        <Card title="Dados dos Sensores - Últimas 24h">
-          <SensorChart data={sensorData} />
-        </Card>
-
-        {/* Painel de Alertas */}
-        <Card title="Alertas Recentes">
-          <AlertsPanel alerts={alerts} onRefresh={loadDashboardData} />
-        </Card>
-      </div>
-
-      <div className="grid grid-2">
-        {/* Atividade Recente */}
-        <Card title="Atividade Recente">
-          <RecentActivity />
-        </Card>
-
-        {/* Estatísticas de Usuários */}
-        <Card title="Usuários do Sistema">
-          <div className="grid grid-2" style={{ gap: '1rem' }}>
-            <div style={{
-              padding: '1rem',
-              backgroundColor: 'var(--gray-50)',
-              borderRadius: '0.5rem',
-              textAlign: 'center'
-            }}>
-              <div style={{
-                fontSize: '1.5rem',
-                fontWeight: '700',
-                color: 'var(--primary-blue)'
-              }}>
-                {userStats.totalAdminsAtivos || 0}
+            {/* Esquerda: nível + FR% */}
+            <div>
+              <div style={{ fontSize: '0.68rem', fontWeight: '700', color: nivel.color, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>
+                Situação Atual
               </div>
-              <div style={{
-                fontSize: '0.875rem',
-                color: 'var(--gray-600)',
-                marginTop: '0.25rem'
-              }}>
-                Administradores
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: nivel.color, lineHeight: 1 }}>
+                {nivel.label}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', marginTop: '0.375rem' }}>
+                <span style={{ fontSize: '1.75rem', fontWeight: '700', color: nivel.color }}>
+                  {fmt(riscoAtual)}%
+                </span>
+                <span style={{ fontSize: '0.75rem', color: nivel.color, opacity: 0.7 }}>FR</span>
+              </div>
+              {ul.amplificado && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.375rem', padding: '0.15rem 0.5rem', backgroundColor: '#fff7ed', border: '1px solid #fdba74', borderRadius: '0.25rem', fontSize: '0.72rem', fontWeight: '700', color: '#c2410c' }}>
+                  <Zap size={11} /> Amplificado ×1,20
+                </div>
+              )}
+            </div>
+
+            {/* Centro: barra umidade + métricas */}
+            <div>
+              <div style={{ marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: '600', color: '#374151' }}>Umidade do Solo</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: '700', color: parseFloat(ul.umidadeSolo) >= 30 ? '#dc2626' : parseFloat(ul.umidadeSolo) >= 20 ? '#d97706' : '#0891b2' }}>
+                    {fmt(ul.umidadeSolo)}%
+                  </span>
+                </div>
+                <div style={{ height: '8px', backgroundColor: '#e5e7eb', borderRadius: '9999px', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: '9999px',
+                    width: `${Math.min((parseFloat(ul.umidadeSolo) || 0) / 30 * 100, 100)}%`,
+                    backgroundColor: parseFloat(ul.umidadeSolo) >= 30 ? '#dc2626' : parseFloat(ul.umidadeSolo) >= 20 ? '#d97706' : '#0891b2',
+                    transition: 'width 0.4s ease',
+                  }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.15rem' }}>
+                  <span style={{ fontSize: '0.62rem', color: '#9ca3af' }}>0%</span>
+                  <span style={{ fontSize: '0.62rem', color: '#d97706' }}>Crítico: 25%</span>
+                  <span style={{ fontSize: '0.62rem', color: '#dc2626' }}>Ruptura: 30%</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                {[
+                  { label: 'Precip. 24h',    value: `${fmt(ul.precipitacao24h)} mm` },
+                  { label: 'Prev. 24h',      value: `${fmt(ul.chuvaFutura24h)} mm` },
+                  { label: 'Confiabilidade', value: ul.confiabilidade != null ? `${ul.confiabilidade}%` : '—',
+                    highlight: ul.confiabilidade >= 90 ? '#16a34a' : ul.confiabilidade >= 70 ? '#d97706' : '#dc2626' },
+                ].map(({ label, value, highlight }) => (
+                  <div key={label} style={{ padding: '0.375rem 0.5rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #e5e7eb' }}>
+                    <div style={{ fontSize: '0.65rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: '600' }}>{label}</div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: '700', color: highlight || '#374151', marginTop: '0.1rem' }}>{value}</div>
+                  </div>
+                ))}
               </div>
             </div>
-            
-            <div style={{
-              padding: '1rem',
-              backgroundColor: 'var(--gray-50)',
-              borderRadius: '0.5rem',
-              textAlign: 'center'
-            }}>
-              <div style={{
-                fontSize: '1.5rem',
-                fontWeight: '700',
-                color: 'var(--terracotta)'
-              }}>
-                {userStats.totalBasicosAtivos || 0}
+
+            {/* Direita: qualidade + recomendação */}
+            <div style={{ minWidth: '180px' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.375rem' }}>
+                Qualidade da Análise
               </div>
-              <div style={{
-                fontSize: '0.875rem',
-                color: 'var(--gray-600)',
-                marginTop: '0.25rem'
-              }}>
-                Usuários Básicos
+              <DataRow label="BNDMET"           value={ul.statusApiBndmet || '—'}   highlight={ul.statusApiBndmet === 'OK' ? '#16a34a' : '#dc2626'} />
+              <DataRow label="OWM"              value={ul.statusApiOwm || '—'}      highlight={ul.statusApiOwm === 'OK' ? '#16a34a' : '#dc2626'} />
+              <DataRow label="Sensor ESP"       value={ul.sensorOk ? '✅ OK' : '❌ Falha'} />
+              <DataRow label="Qual. BNDMET"     value={ul.qualidadeDadosBndmet != null ? `${ul.qualidadeDadosBndmet}%` : '—'}
+                highlight={ul.qualidadeDadosBndmet >= 80 ? '#16a34a' : ul.qualidadeDadosBndmet != null ? '#d97706' : '#9ca3af'} />
+              <div style={{ marginTop: '0.5rem', fontSize: '0.68rem', color: '#9ca3af' }}>
+                Leitura: {formatDateBR(ul.timestamp)}
+              </div>
+              {ul.recomendacao && (
+                <div style={{ marginTop: '0.5rem', padding: '0.375rem 0.5rem', backgroundColor: 'white', borderRadius: '0.25rem', border: '1px solid #e5e7eb', fontSize: '0.72rem', color: '#374151', lineHeight: 1.4 }}>
+                  💡 {ul.recomendacao}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Linha 3: 5 KPIs ─────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        <StatCard icon={Activity}      iconColor="#2563eb"
+          value={sensorStats.totalLeituras || 0}
+          label="Leituras Hoje" sub="últimas 24h" />
+        <StatCard icon={Droplets}      iconColor="#0891b2"
+          value={`${fmt(sensorStats.mediaUmidade)}%`}
+          valueColor={parseFloat(sensorStats.mediaUmidade) >= 25 ? '#dc2626' : parseFloat(sensorStats.mediaUmidade) >= 15 ? '#d97706' : '#0891b2'}
+          label="Umidade Média" sub="limiar crítico: 25%" />
+        <StatCard icon={Shield}        iconColor="#dc2626"
+          value={`${fmt(mediaRiscoPct)}%`}
+          valueColor={mediaRiscoPct > 80 ? '#dc2626' : mediaRiscoPct > 50 ? '#d97706' : '#16a34a'}
+          label="Risco Médio (FR)" sub="Verde ≤50% / Amar. ≤80%" />
+        <StatCard icon={Cloud}         iconColor="#1d4ed8"
+          value={`${fmt(sensorStats.mediaPrecipitacao)} mm`}
+          label="Precip. Média 24h" sub="BNDMET D6594 I006" />
+        <StatCard icon={AlertTriangle}
+          iconColor={sensorStats.alertasCriticos > 0 ? '#dc2626' : '#16a34a'}
+          value={sensorStats.alertasCriticos || 0}
+          valueColor={sensorStats.alertasCriticos > 0 ? '#dc2626' : '#16a34a'}
+          label="Alertas Críticos" sub="últimas 24h" />
+      </div>
+
+      {/* ── Linha 4: Gráfico (70%) + Alertas (30%) ──────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid #e5e7eb', padding: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h4 style={{ fontSize: '0.875rem', fontWeight: '700', color: '#374151', margin: 0 }}>
+              Dados dos Sensores — Últimas 24h
+            </h4>
+            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.7rem', color: '#6b7280', flexWrap: 'wrap' }}>
+              {[
+                { color: '#0891b2', label: 'Umidade (%)' },
+                { color: '#1d4ed8', label: 'Precip. 24h (mm)' },
+                { color: '#93c5fd', label: 'Prev. 24h (mm)' },
+                { color: '#dc2626', label: 'Risco (%)' },
+              ].map(({ color, label }) => (
+                <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span style={{ width: '1.25rem', height: '3px', backgroundColor: color, borderRadius: '2px', display: 'inline-block' }} />
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+          <SensorChart data={sensorData} />
+        </div>
+
+        <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid #e5e7eb', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
+          <h4 style={{ fontSize: '0.875rem', fontWeight: '700', color: '#374151', margin: '0 0 0.75rem' }}>
+            Alertas Recentes
+          </h4>
+          <AlertsPanel alerts={alerts} onRefresh={loadDashboardData} />
+        </div>
+      </div>
+
+      {/* ── Linha 5: Meteorologia + Atividade ──────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+
+        {ul.id && (
+          <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid #e5e7eb', padding: '1rem' }}>
+            <h4 style={{ fontSize: '0.875rem', fontWeight: '700', color: '#374151', margin: '0 0 0.75rem' }}>
+              🌤 Meteorologia — Última Leitura
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              {[
+                { icon: ThermometerSun, label: 'Temperatura',  value: `${fmt(ul.temperatura)} °C`,         color: '#d97706' },
+                { icon: Droplets,       label: 'Umid. externa', value: `${fmt(ul.umidadeExterna)}%`,        color: '#0891b2' },
+                { icon: Gauge,          label: 'Pressão atm.',  value: `${fmt(ul.pressaoAtmosferica)} hPa`, color: '#7c3aed' },
+                { icon: Wind,           label: 'Vento',          value: `${fmt(ul.velocidadeVento)} m/s`,   color: '#059669' },
+              ].map(({ icon: Ic, label, value, color }) => (
+                <div key={label} style={{ padding: '0.5rem 0.625rem', backgroundColor: '#f9fafb', borderRadius: '0.375rem', border: '1px solid #f3f4f6' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.2rem' }}>
+                    <Ic size={12} color={color} />
+                    <span style={{ fontSize: '0.65rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: '600' }}>{label}</span>
+                  </div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: '700', color: '#374151' }}>{value}</div>
+                </div>
+              ))}
+            </div>
+            {ul.descricaoTempo && (
+              <div style={{ fontSize: '0.78rem', color: '#6b7280', padding: '0.375rem 0.5rem', backgroundColor: '#f9fafb', borderRadius: '0.25rem' }}>
+                ☁️ {ul.descricaoTempo}
+              </div>
+            )}
+            <div style={{ marginTop: '0.625rem' }}>
+              <div style={{ fontSize: '0.68rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: '600', marginBottom: '0.25rem' }}>Precipitação</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.375rem' }}>
+                {[
+                  { label: 'Acum. 24h', value: `${fmt(ul.precipitacao24h)} mm` },
+                  { label: 'Acum. 7d',  value: `${fmt(ul.precipitacao7d)} mm` },
+                  { label: 'Prev. 24h', value: `${fmt(ul.chuvaFutura24h)} mm` },
+                ].map(({ label, value }) => (
+                  <div key={label} style={{ padding: '0.3rem 0.4rem', backgroundColor: '#eff6ff', borderRadius: '0.25rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.62rem', color: '#3b82f6', fontWeight: '600' }}>{label}</div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1d4ed8' }}>{value}</div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-        </Card>
-      </div>
+        )}
 
-      {/* Resumo da Última Leitura */}
-      {ultimaLeitura.id && (
-        <div className="grid grid-3 mt-4">
-          <Card title="Última Leitura">
-            <div style={{ padding: '1rem 0' }}>
-              <div style={{ marginBottom: '1rem' }}>
-                <p style={{ 
-                  fontSize: '0.75rem', 
-                  color: 'var(--gray-500)', 
-                  margin: '0 0 0.25rem 0' 
-                }}>
-                  Timestamp
-                </p>
-                <p style={{ 
-                  fontSize: '0.875rem', 
-                  fontWeight: '500', 
-                  margin: 0 
-                }}>
-                  {new Date(ultimaLeitura.timestamp).toLocaleString('pt-BR')}
-                </p>
-              </div>
-              
-              <div style={{ marginBottom: '1rem' }}>
-                <p style={{ 
-                  fontSize: '0.75rem', 
-                  color: 'var(--gray-500)', 
-                  margin: '0 0 0.25rem 0' 
-                }}>
-                  Nível de Alerta
-                </p>
-                <span style={{
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '0.25rem',
-                  fontSize: '0.75rem',
-                  fontWeight: '500',
-                  backgroundColor: ultimaLeitura.nivelAlerta === 'VERDE' ? 'var(--green-100)' : 
-                                 ultimaLeitura.nivelAlerta === 'AMARELO' ? 'var(--yellow-100)' : 'var(--red-100)',
-                  color: ultimaLeitura.nivelAlerta === 'VERDE' ? 'var(--green-600)' : 
-                         ultimaLeitura.nivelAlerta === 'AMARELO' ? 'var(--yellow-600)' : 'var(--red-600)'
-                }}>
-                  {ultimaLeitura.nivelAlerta}
-                </span>
-              </div>
-
-              <div>
-                <p style={{ 
-                  fontSize: '0.75rem', 
-                  color: 'var(--gray-500)', 
-                  margin: '0 0 0.25rem 0' 
-                }}>
-                  Recomendação
-                </p>
-                <p style={{ 
-                  fontSize: '0.875rem', 
-                  margin: 0,
-                  lineHeight: '1.4'
-                }}>
-                  {ultimaLeitura.recomendacao}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card title="Dados Meteorológicos">
-            <div style={{ padding: '1rem 0' }}>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '1fr 1fr', 
-                gap: '1rem' 
-              }}>
-                <div>
-                  <p style={{ 
-                    fontSize: '0.75rem', 
-                    color: 'var(--gray-500)', 
-                    margin: '0 0 0.25rem 0' 
-                  }}>
-                    Temperatura
-                  </p>
-                  <p style={{ 
-                    fontSize: '1.25rem', 
-                    fontWeight: '600', 
-                    margin: 0 
-                  }}>
-                    {ultimaLeitura.temperatura}°C
-                  </p>
-                </div>
-                
-                <div>
-                  <p style={{ 
-                    fontSize: '0.75rem', 
-                    color: 'var(--gray-500)', 
-                    margin: '0 0 0.25rem 0' 
-                  }}>
-                    Umidade Externa
-                  </p>
-                  <p style={{ 
-                    fontSize: '1.25rem', 
-                    fontWeight: '600', 
-                    margin: 0 
-                  }}>
-                    {ultimaLeitura.umidadeExterna}%
-                  </p>
-                </div>
-                
-                <div>
-                  <p style={{ 
-                    fontSize: '0.75rem', 
-                    color: 'var(--gray-500)', 
-                    margin: '0 0 0.25rem 0' 
-                  }}>
-                    Pressão
-                  </p>
-                  <p style={{ 
-                    fontSize: '1.25rem', 
-                    fontWeight: '600', 
-                    margin: 0 
-                  }}>
-                    {ultimaLeitura.pressaoAtmosferica} hPa
-                  </p>
-                </div>
-                
-                <div>
-                  <p style={{ 
-                    fontSize: '0.75rem', 
-                    color: 'var(--gray-500)', 
-                    margin: '0 0 0.25rem 0' 
-                  }}>
-                    Vento
-                  </p>
-                  <p style={{ 
-                    fontSize: '1.25rem', 
-                    fontWeight: '600', 
-                    margin: 0 
-                  }}>
-                    {ultimaLeitura.velocidadeVento} km/h
-                  </p>
-                </div>
-              </div>
-              
-              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--gray-200)' }}>
-                <p style={{ 
-                  fontSize: '0.75rem', 
-                  color: 'var(--gray-500)', 
-                  margin: '0 0 0.25rem 0' 
-                }}>
-                  Condições
-                </p>
-                <p style={{ 
-                  fontSize: '0.875rem', 
-                  fontWeight: '500', 
-                  margin: 0 
-                }}>
-                  {ultimaLeitura.descricaoTempo}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card title="Qualidade dos Dados">
-            <div style={{ padding: '1rem 0' }}>
-              <div style={{ marginBottom: '1rem' }}>
-                <p style={{ 
-                  fontSize: '0.75rem', 
-                  color: 'var(--gray-500)', 
-                  margin: '0 0 0.25rem 0' 
-                }}>
-                  BNDMET API
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '0.25rem',
-                    fontSize: '0.75rem',
-                    fontWeight: '500',
-                    backgroundColor: ultimaLeitura.statusApiBndmet === 'OK' ? 'var(--green-100)' : 'var(--red-100)',
-                    color: ultimaLeitura.statusApiBndmet === 'OK' ? 'var(--green-600)' : 'var(--red-600)'
-                  }}>
-                    {ultimaLeitura.statusApiBndmet}
-                  </span>
-                  <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>
-                    {ultimaLeitura.qualidadeDadosBndmet}%
-                  </span>
-                </div>
-              </div>
-              
-              <div style={{ marginBottom: '1rem' }}>
-                <p style={{ 
-                  fontSize: '0.75rem', 
-                  color: 'var(--gray-500)', 
-                  margin: '0 0 0.25rem 0' 
-                }}>
-                  Confiabilidade
-                </p>
-                <p style={{ 
-                  fontSize: '1.25rem', 
-                  fontWeight: '600', 
-                  margin: 0,
-                  color: ultimaLeitura.confiabilidade >= 90 ? 'var(--green-600)' : 
-                         ultimaLeitura.confiabilidade >= 70 ? 'var(--yellow-600)' : 'var(--red-600)'
-                }}>
-                  {ultimaLeitura.confiabilidade}%
-                </p>
-              </div>
-              
-              <div>
-                <p style={{ 
-                  fontSize: '0.75rem', 
-                  color: 'var(--gray-500)', 
-                  margin: '0 0 0.25rem 0' 
-                }}>
-                  Status do Sensor
-                </p>
-                <span style={{
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '0.25rem',
-                  fontSize: '0.75rem',
-                  fontWeight: '500',
-                  backgroundColor: ultimaLeitura.sensorOk ? 'var(--green-100)' : 'var(--red-100)',
-                  color: ultimaLeitura.sensorOk ? 'var(--green-600)' : 'var(--red-600)'
-                }}>
-                  {ultimaLeitura.sensorOk ? 'Funcionando' : 'Com Problemas'}
-                </span>
-              </div>
-            </div>
-          </Card>
+        <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid #e5e7eb', padding: '1rem' }}>
+          <h4 style={{ fontSize: '0.875rem', fontWeight: '700', color: '#374151', margin: '0 0 0.75rem' }}>
+            📋 Atividade do Sistema
+          </h4>
+          <RecentActivity />
         </div>
-      )}
+      </div>
     </div>
   );
 }

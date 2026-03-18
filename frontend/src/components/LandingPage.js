@@ -2,7 +2,7 @@
 // ============= src/components/LandingPage.js =============
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { userService } from '@/services/api';
@@ -30,7 +30,7 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const { register, handleSubmit, formState: { errors }, reset, watch } = useForm({
+  const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm({
     defaultValues: {
       nome: '',
       email: '',
@@ -41,6 +41,16 @@ export default function LandingPage() {
   });
 
   const receberNotificacoes = watch('receberNotificacoes');
+
+  // Máscara de telefone em tempo real
+  const maskTelefone = (value) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length === 0) return '';
+    if (digits.length <= 2)  return `(${digits}`;
+    if (digits.length <= 6)  return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+    if (digits.length <= 10) return `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
+    return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+  };
 
   const handleLoginClick = () => {
     router.push('/login');
@@ -596,42 +606,17 @@ export default function LandingPage() {
               label="Telefone"
               placeholder="(11) 99999-9999"
               {...register('telefone', {
-                pattern: {
-                  value: /^\(\d{2}\)\s?\d{4,5}-?\d{4}$/,
-                  message: 'Formato: (11) 99999-9999'
-                }
+                validate: v => !v || /^\(\d{2}\) \d{4,5}-\d{4}$/.test(v) || 'Formato inválido. Use: (XX) XXXXX-XXXX'
               })}
+              onChange={e => {
+                const masked = maskTelefone(e.target.value);
+                setValue('telefone', masked, { shouldValidate: false });
+              }}
               error={errors.telefone?.message}
             />
           </div>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <input
-                type="checkbox"
-                id="receberNotificacoes"
-                {...register('receberNotificacoes')}
-                style={{
-                  width: '1rem',
-                  height: '1rem',
-                  accentColor: '#2563eb'
-                }}
-              />
-              <label 
-                htmlFor="receberNotificacoes"
-                style={{
-                  fontSize: '0.875rem',
-                  color: '#374151',
-                  cursor: 'pointer'
-                }}
-              >
-                Aceito receber notificações sobre alertas de barragem
-              </label>
-            </div>
-          </div>
-
-          {receberNotificacoes && (
-            <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ marginBottom: '1.5rem' }}>
               <label style={{
                 display: 'block',
                 fontSize: '0.875rem',
@@ -707,7 +692,6 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-          )}
 
           <div style={{
             display: 'flex',

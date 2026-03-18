@@ -1,13 +1,12 @@
-// Gestão de usuários - Com filtro por botão
+// Gestão de usuários — Estrutura UX completa
 // ============= src/components/users/UsersContent.js =============
 'use client';
 
 import { useState, useEffect } from 'react';
 import { userService } from '@/services/api';
 import { usePagination } from '@/hooks';
-import { formatDate } from '@/utils';
+import { formatDateBRCSV } from '@/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
@@ -15,469 +14,331 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import UserForm from './UserForm';
 import UserTable from './UserTable';
 import InactiveUsersModal from './InactiveUsersModal';
-import { Plus, Search, Filter, Download, Users, UserCog, RefreshCw, UserX, X } from 'lucide-react';
+import {
+  Plus, Search, Download, Users, UserCog,
+  RefreshCw, UserX, X, Bell, AlertTriangle,
+  Activity, UserCheck,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  KPI Card
+// ─────────────────────────────────────────────────────────────────────────────
+const KpiCard = ({ icon: Icon, iconColor, value, label, sub, valueColor }) => (
+  <div style={{ padding: '1rem 1.25rem', backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+    <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.5rem', backgroundColor: `${iconColor}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <Icon size={20} color={iconColor} />
+    </div>
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: '1.5rem', fontWeight: '700', color: valueColor || '#111827', lineHeight: 1.2 }}>{value}</div>
+      <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151', marginTop: '0.1rem' }}>{label}</div>
+      {sub && <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: '0.1rem' }}>{sub}</div>}
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Componente principal
+// ─────────────────────────────────────────────────────────────────────────────
 export default function UsersContent() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [showInactiveModal, setShowInactiveModal] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('basic');
-  const [stats, setStats] = useState(null);
-  
-  // Estados de filtro separados
-  const [searchInput, setSearchInput] = useState(''); // Input local (não dispara API)
-  const [activeFilter, setActiveFilter] = useState(''); // Filtro ativo (dispara API)
-  
+  const [users,              setUsers]              = useState([]);
+  const [loading,            setLoading]            = useState(true);
+  const [refreshing,         setRefreshing]         = useState(false);
+  const [showModal,          setShowModal]          = useState(false);
+  const [showInactiveModal,  setShowInactiveModal]  = useState(false);
+  const [editingUser,        setEditingUser]        = useState(null);
+  const [activeTab,          setActiveTab]          = useState('basic');
+  const [stats,              setStats]              = useState(null);
+  const [searchInput,        setSearchInput]        = useState('');
+  const [activeFilter,       setActiveFilter]       = useState('');
+
   const { isSuperAdmin } = useAuth();
   const pagination = usePagination(1, 10);
 
-  // Carrega usuários quando filtro ativo ou paginação muda
   useEffect(() => {
     loadUsers();
     loadUserStats();
   }, [activeTab, pagination.page, pagination.limit, activeFilter]);
 
-  const loadUsers = async (showRefreshingIndicator = false) => {
-    if (showRefreshingIndicator) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    
+  // ── Carregamento ──────────────────────────────────────────────────────────
+  const loadUsers = async (showRefreshIndicator = false) => {
+    if (showRefreshIndicator) setRefreshing(true);
+    else setLoading(true);
+
     try {
-      const params = {
-        pagina: pagination.page,
-        limite: pagination.limit,
-        busca: activeFilter || undefined,
-        ativo: true
-      };
-
-      let response;
-      if (activeTab === 'basic') {
-        response = await userService.getBasicUsers(params);
-      } else {
-        response = await userService.getAdminUsers(params);
-      }
-
-      console.log(`📋 Response ${activeTab}:`, response);
+      const params = { pagina: pagination.page, limite: pagination.limit, busca: activeFilter || undefined, ativo: true };
+      const response = activeTab === 'basic'
+        ? await userService.getBasicUsers(params)
+        : await userService.getAdminUsers(params);
 
       if (response.success) {
-        const usersData = Array.isArray(response.data) ? 
-          response.data : 
-          response.data.usuarios || [];
-        
-        console.log(`✅ Usuários ativos recebidos da API (${activeTab}):`, usersData.length);
-        setUsers(usersData);
-        
-        if (response.pagination) {
-          pagination.setTotal(response.pagination.total);
-        } else {
-          pagination.setTotal(usersData.length);
-        }
-        
-        if (usersData.length === 0 && activeFilter) {
-          toast.info('Nenhum usuário ativo encontrado com os filtros aplicados');
-        }
+        const data = Array.isArray(response.data) ? response.data : response.data.usuarios || [];
+        setUsers(data);
+        pagination.setTotal(response.pagination?.total ?? data.length);
+        if (data.length === 0 && activeFilter) toast.info('Nenhum usuário encontrado com esse filtro.');
       } else {
-        console.error(`❌ Erro na resposta da API (${activeTab}):`, response);
-        setUsers([]);
-        pagination.setTotal(0);
+        setUsers([]); pagination.setTotal(0);
       }
     } catch (error) {
-      console.error(`❌ Erro ao carregar usuários (${activeTab}):`, error);
-      toast.error(`Erro ao carregar ${activeTab === 'basic' ? 'usuários básicos' : 'administradores'}`);
-      setUsers([]);
-      pagination.setTotal(0);
+      console.error('Erro ao carregar usuários:', error);
+      toast.error(`Erro ao carregar ${activeTab === 'basic' ? 'usuários' : 'administradores'}`);
+      setUsers([]); pagination.setTotal(0);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setLoading(false); setRefreshing(false);
     }
   };
 
   const loadUserStats = async () => {
     try {
       const response = await userService.getUserStats();
-      if (response.success) {
-        setStats(response.data);
-      }
+      if (response.success) setStats(response.data);
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
     }
   };
 
-  // Função para aplicar filtro (só quando clicar no botão)
+  // ── Filtros ───────────────────────────────────────────────────────────────
   const handleApplyFilter = () => {
-    console.log('🔍 Aplicando filtro:', searchInput);
     setActiveFilter(searchInput.trim());
     pagination.goToPage(1);
   };
 
-  // Função para limpar filtros
   const handleClearFilters = () => {
-    console.log('🧹 Limpando filtros');
-    setSearchInput('');
-    setActiveFilter('');
-    pagination.goToPage(1);
+    setSearchInput(''); setActiveFilter(''); pagination.goToPage(1);
   };
 
-  // Função para trocar de aba
-  const handleTabChange = (newTab) => {
-    setActiveTab(newTab);
-    setSearchInput('');
-    setActiveFilter('');
-    pagination.goToPage(1);
+  const handleTabChange = (tab) => {
+    setActiveTab(tab); setSearchInput(''); setActiveFilter(''); pagination.goToPage(1);
   };
 
-  const handleNewUser = () => {
-    setEditingUser(null);
-    setShowModal(true);
-  };
-
-  const handleEditUser = (user) => {
-    setEditingUser(user);
-    setShowModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setEditingUser(null);
-  };
+  // ── Ações de usuário ──────────────────────────────────────────────────────
+  const handleNewUser  = ()     => { setEditingUser(null); setShowModal(true); };
+  const handleEditUser = (user) => { setEditingUser(user); setShowModal(true); };
+  const handleCloseModal = ()   => { setShowModal(false); setEditingUser(null); };
 
   const handleUserSaved = () => {
     handleCloseModal();
     loadUsers(true);
     loadUserStats();
-    toast.success(`${editingUser ? 'Usuário atualizado' : 'Usuário criado'} com sucesso!`);
   };
 
-  const handleUserReactivated = () => {
-    loadUsers(true);
-    loadUserStats();
+  const handleUserReactivated = () => { loadUsers(true); loadUserStats(); };
+  const handleRefresh = () => { loadUsers(true); loadUserStats(); };
+
+  // ── Export CSV funcional ──────────────────────────────────────────────────
+  const handleExport = async () => {
+    try {
+      // Busca todos sem paginação para exportar
+      const params = { pagina: 1, limite: 9999, busca: activeFilter || undefined, ativo: true };
+      const response = activeTab === 'basic'
+        ? await userService.getBasicUsers(params)
+        : await userService.getAdminUsers(params);
+
+      if (!response.success) { toast.error('Erro ao obter dados para exportação'); return; }
+
+      const allUsers = Array.isArray(response.data) ? response.data : response.data.usuarios || [];
+      if (!allUsers.length) { toast.error('Nenhum dado para exportar'); return; }
+
+      let rows;
+      if (activeTab === 'basic') {
+        rows = [
+          ['Nome', 'Email', 'Telefone', 'Receber Notificações', 'Tipo Notificação', 'Status', 'Criado em', 'Atualizado em', 'ID'],
+          ...allUsers.map(u => [
+            `"${(u.nome||'').replace(/"/g,'""')}"`,
+            u.email || '',
+            u.telefone || '',
+            u.receberNotificacoes ? 'Sim' : 'Não',
+            u.tipoNotificacao === 'email,sms' ? 'Email + SMS' : 'Apenas Email',
+            u.ativo ? 'Ativo' : 'Inativo',
+            formatDateBRCSV(u.createdAt),
+            formatDateBRCSV(u.updatedAt),
+            u.id || '',
+          ]),
+        ];
+      } else {
+        rows = [
+          ['Nome', 'Email', 'Perfil', 'Último Login', 'Status', 'Criado em', 'Atualizado em', 'ID'],
+          ...allUsers.map(u => [
+            `"${(u.nome||'').replace(/"/g,'""')}"`,
+            u.email || '',
+            u.perfil === 'super_admin' ? 'Super Administrador' : 'Administrador',
+            u.ultimoLogin ? formatDateBRCSV(u.ultimoLogin) : 'Nunca',
+            u.ativo ? 'Ativo' : 'Inativo',
+            formatDateBRCSV(u.createdAt),
+            formatDateBRCSV(u.updatedAt),
+            u.id || '',
+          ]),
+        ];
+      }
+
+      const csv   = rows.map(r => r.join(',')).join('\n');
+      const blob  = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url   = window.URL.createObjectURL(blob);
+      const link  = document.createElement('a');
+      const tipo  = activeTab === 'basic' ? 'usuarios_basicos' : 'administradores';
+      const data  = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+      link.href   = url;
+      link.download = `${tipo}_${data}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success(`${allUsers.length} registros exportados com sucesso!`);
+    } catch (error) {
+      console.error('Erro na exportação:', error);
+      toast.error('Erro ao exportar dados');
+    }
   };
 
-  const handleRefresh = () => {
-    loadUsers(true);
-    loadUserStats();
-  };
+  const canEdit = () => isSuperAdmin() || activeTab === 'basic';
 
-  const handleExport = () => {
-    toast.success('Funcionalidade de exportação em desenvolvimento!');
-  };
+  // Totais derivados para as abas
+  const totalInativos = (stats?.totalAdminsInativos || 0) + (stats?.totalBasicosInativos || 0);
+  const totalUsuarios = (stats?.totalAdminsAtivos || 0) + (stats?.totalBasicosAtivos || 0)
+    + (stats?.totalAdminsInativos || 0) + (stats?.totalBasicosInativos || 0);
 
-  const canEdit = () => {
-    return isSuperAdmin() || activeTab === 'basic';
-  };
-
+  // ── JSX ───────────────────────────────────────────────────────────────────
   return (
     <div>
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '1.5rem',
-        flexWrap: 'wrap',
-        gap: '1rem'
-      }}>
+
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h1 style={{
-            fontSize: '1.875rem',
-            fontWeight: '700',
-            color: 'var(--gray-900)',
-            margin: '0 0 0.5rem 0'
-          }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#111827', margin: 0 }}>
             Gestão de Usuários
           </h1>
-          <p style={{
-            color: 'var(--gray-600)',
-            margin: 0
-          }}>
+          <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0.2rem 0 0 0' }}>
             Gerencie usuários básicos e administradores do sistema
           </p>
         </div>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          flexWrap: 'wrap'
-        }}>
-          <Button
-            variant="outline"
-            onClick={() => setShowInactiveModal(true)}
-            style={{
-              color: 'var(--gray-600)',
-              borderColor: 'var(--gray-300)'
-            }}
-          >
-            <UserX size={16} />
-            Inativos
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <Button variant="outline" onClick={() => setShowInactiveModal(true)} style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>
+            <UserX size={14} /> Inativos {totalInativos > 0 && <span style={{ marginLeft: '0.25rem', backgroundColor: '#fee2e2', color: '#dc2626', borderRadius: '9999px', padding: '0.1rem 0.4rem', fontSize: '0.7rem', fontWeight: '700' }}>{totalInativos}</span>}
           </Button>
-
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            loading={refreshing}
-            disabled={refreshing}
-          >
-            <RefreshCw size={16} />
-            Atualizar
+          <Button variant="outline" onClick={handleRefresh} loading={refreshing} style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>
+            <RefreshCw size={14} /> Atualizar
           </Button>
-
-          <Button
-            variant="outline"
-            onClick={handleExport}
-          >
-            <Download size={16} />
-            Exportar ({users.length})
-          </Button>
-
-          <Button
-            variant="primary"
-            onClick={handleNewUser}
-          >
-            <Plus size={16} />
-            Novo Usuário
+          <Button variant="primary" onClick={handleNewUser} style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>
+            <Plus size={14} /> Novo Usuário
           </Button>
         </div>
       </div>
 
-      {/* Cards de Estatísticas */}
-      {stats && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '1rem',
-          marginBottom: '2rem'
-        }}>
-          <Card>
-            <div className="text-center" style={{ padding: '1.5rem' }}>
-              <div style={{
-                fontSize: '2rem',
-                fontWeight: '700',
-                color: 'var(--primary-blue)',
-                marginBottom: '0.5rem'
-              }}>
-                {stats.totalAdminsAtivos || 0}
-              </div>
-              <div style={{
-                fontSize: '0.875rem',
-                color: 'var(--gray-600)'
-              }}>
-                Admins Ativos
-              </div>
-            </div>
-          </Card>
+      {/* ── 6 KPIs ──────────────────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        <KpiCard icon={Users}        iconColor="#2563eb"  value={totalUsuarios}                   label="Total de Usuários"   sub="ativos + inativos" />
+        <KpiCard icon={UserCog}      iconColor="#7c3aed"  value={stats?.totalAdminsAtivos  || 0}  label="Admins Ativos"       sub={`${stats?.totalAdminsInativos || 0} inativos`} />
+        <KpiCard icon={UserCheck}    iconColor="#0891b2"  value={stats?.totalBasicosAtivos || 0}  label="Básicos Ativos"      sub={`${stats?.totalBasicosInativos || 0} inativos`} />
+        <KpiCard icon={Bell}         iconColor="#16a34a"  value={stats?.totalComNotificacoes || 0} label="Com Notificações"    sub="usuários básicos" />
+        <KpiCard icon={Activity}     iconColor="#dc2626"  value={totalInativos}                   label="Inativos Total"      sub="admins + básicos" valueColor={totalInativos > 0 ? '#dc2626' : '#374151'} />
+        <KpiCard icon={AlertTriangle} iconColor="#d97706" value={stats?.alertasUltimos30Dias || 0} label="Alertas Enviados"   sub="últimos 30 dias" />
+      </div>
 
-          <Card>
-            <div className="text-center" style={{ padding: '1.5rem' }}>
-              <div style={{
-                fontSize: '2rem',
-                fontWeight: '700',
-                color: 'var(--terracotta)',
-                marginBottom: '0.5rem'
-              }}>
-                {stats.totalBasicosAtivos || 0}
-              </div>
-              <div style={{
-                fontSize: '0.875rem',
-                color: 'var(--gray-600)'
-              }}>
-                Usuários Ativos
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="text-center" style={{ padding: '1.5rem' }}>
-              <div style={{
-                fontSize: '2rem',
-                fontWeight: '700',
-                color: 'var(--green-600)',
-                marginBottom: '0.5rem'
-              }}>
-                {stats.totalComNotificacoes || 0}
-              </div>
-              <div style={{
-                fontSize: '0.875rem',
-                color: 'var(--gray-600)'
-              }}>
-                Com Notificações
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="text-center" style={{ padding: '1.5rem' }}>
-              <div style={{
-                fontSize: '2rem',
-                fontWeight: '700',
-                color: 'var(--yellow-600)',
-                marginBottom: '0.5rem'
-              }}>
-                {stats.alertasUltimos30Dias || 0}
-              </div>
-              <div style={{
-                fontSize: '0.875rem',
-                color: 'var(--gray-600)'
-              }}>
-                Alertas (30d)
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        marginBottom: '1.5rem',
-        borderBottom: '1px solid var(--gray-200)',
-        paddingBottom: '1rem'
-      }}>
+      {/* ── Abas ────────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '1rem', borderBottom: '2px solid #e5e7eb', paddingBottom: '0' }}>
         {[
-          { key: 'basic', label: 'Usuários Básicos', icon: Users, count: stats?.totalBasicosAtivos },
-          { key: 'admin', label: 'Administradores', icon: UserCog, count: stats?.totalAdminsAtivos }
-        ].map(({ key, label, icon: Icon, count }) => {
+          {
+            key:   'basic',
+            label: 'Usuários Básicos',
+            icon:  Users,
+            ativos:   stats?.totalBasicosAtivos   || 0,
+            inativos: stats?.totalBasicosInativos || 0,
+          },
+          {
+            key:   'admin',
+            label: 'Administradores',
+            icon:  UserCog,
+            ativos:   stats?.totalAdminsAtivos   || 0,
+            inativos: stats?.totalAdminsInativos || 0,
+          },
+        ].map(({ key, label, icon: Icon, ativos, inativos }) => {
           const isActive = activeTab === key;
-          
           return (
             <button
               key={key}
               onClick={() => handleTabChange(key)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1rem',
-                border: 'none',
-                borderRadius: '0.375rem',
-                backgroundColor: isActive ? 'var(--primary-blue)' : 'transparent',
-                color: isActive ? 'white' : 'var(--gray-600)',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.target.style.backgroundColor = 'var(--gray-100)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.target.style.backgroundColor = 'transparent';
-                }
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.625rem 1rem',
+                border: 'none', borderRadius: '0.375rem 0.375rem 0 0',
+                borderBottom: isActive ? '2px solid #2563eb' : '2px solid transparent',
+                marginBottom: '-2px',
+                backgroundColor: isActive ? '#eff6ff' : 'transparent',
+                color: isActive ? '#2563eb' : '#6b7280',
+                cursor: 'pointer', fontSize: '0.875rem', fontWeight: isActive ? '600' : '500',
+                transition: 'all 0.15s',
               }}
             >
-              <Icon size={16} />
+              <Icon size={15} />
               {label}
-              {count !== undefined && (
-                <span style={{
-                  padding: '0.125rem 0.5rem',
-                  borderRadius: '9999px',
-                  fontSize: '0.75rem',
-                  backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : 'var(--gray-200)',
-                  color: isActive ? 'white' : 'var(--gray-600)'
-                }}>
-                  {count}
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginLeft: '0.25rem' }}>
+                <span style={{ padding: '0.1rem 0.4rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700', backgroundColor: isActive ? '#2563eb' : '#e5e7eb', color: isActive ? 'white' : '#6b7280' }}>
+                  {ativos}
                 </span>
-              )}
+                {inativos > 0 && (
+                  <span style={{ padding: '0.1rem 0.4rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '600', backgroundColor: '#fee2e2', color: '#dc2626' }}>
+                    {inativos} inativo{inativos > 1 ? 's' : ''}
+                  </span>
+                )}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {/* Filtros com botão dedicado */}
-      <Card className="mb-4">
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <Input
-              placeholder={`Buscar ${activeTab === 'basic' ? 'usuários' : 'administradores'} por nome ou email...`}
+      {/* ── Tabela com header integrado ──────────────────────────────────── */}
+      <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+        {/* Header da tabela: busca + filtros + exportar */}
+        <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+          {/* Busca */}
+          <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+            <Search size={15} style={{ position: 'absolute', left: '0.625rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+            <input
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleApplyFilter();
-                }
-              }}
-              style={{ margin: 0 }}
+              onChange={e => setSearchInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleApplyFilter()}
+              placeholder={`Buscar ${activeTab === 'basic' ? 'usuários' : 'administradores'} por nome ou email...`}
+              style={{ width: '100%', padding: '0.45rem 0.75rem 0.45rem 2rem', border: '1px solid #e5e7eb', borderRadius: '0.375rem', fontSize: '0.8rem', color: '#374151', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
-          
-          <Button
-            variant="primary"
+
+          <button
             onClick={handleApplyFilter}
-            disabled={loading}
+            style={{ padding: '0.45rem 0.875rem', borderRadius: '0.375rem', border: 'none', backgroundColor: '#2563eb', color: 'white', fontSize: '0.8rem', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem' }}
           >
-            <Search size={16} />
-            Filtrar
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={handleClearFilters}
-            disabled={!searchInput && !activeFilter}
-          >
-            <Filter size={16} />
-            Limpar
-          </Button>
-        </div>
-        
-        {/* Indicador de filtro ativo */}
-        {activeFilter && (
-          <div style={{
-            marginTop: '0.75rem',
-            padding: '0.5rem 0.75rem',
-            backgroundColor: '#eff6ff',
-            border: '1px solid #bfdbfe',
-            borderRadius: '0.375rem',
-            fontSize: '0.875rem',
-            color: '#1e40af',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <span>
-              <strong>Filtro ativo:</strong> "{activeFilter}"
-            </span>
+            <Search size={13} /> Filtrar
+          </button>
+
+          {activeFilter && (
             <button
               onClick={handleClearFilters}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#1e40af',
-                cursor: 'pointer',
-                padding: '0.25rem',
-                borderRadius: '0.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem'
-              }}
-              title="Remover filtro"
+              style={{ padding: '0.45rem 0.75rem', borderRadius: '0.375rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: '#6b7280', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem' }}
             >
-              <X size={14} />
-              Remover
+              <X size={13} /> Limpar
             </button>
-          </div>
-        )}
-      </Card>
+          )}
 
-      {/* Tabela de Usuários */}
-      <Card>
+          {/* Divisor */}
+          <div style={{ width: '1px', height: '1.5rem', backgroundColor: '#e5e7eb', flexShrink: 0 }} />
+
+          {/* Exportar */}
+          <button
+            onClick={handleExport}
+            style={{ padding: '0.45rem 0.875rem', borderRadius: '0.375rem', border: '1px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '0.8rem', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem', whiteSpace: 'nowrap' }}
+          >
+            <Download size={13} /> Exportar CSV
+          </button>
+
+          {/* Contagem */}
+          <span style={{ fontSize: '0.78rem', color: '#9ca3af', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+            {pagination.total} {activeTab === 'basic' ? 'usuário(s)' : 'admin(s)'}
+            {activeFilter && <span style={{ marginLeft: '0.375rem', color: '#2563eb', fontWeight: '600' }}>· filtro: "{activeFilter}"</span>}
+          </span>
+        </div>
+
+        {/* Conteúdo */}
         {loading ? (
-          <div className="flex-center" style={{ padding: '3rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
             <LoadingSpinner size="large" />
           </div>
         ) : (
@@ -490,9 +351,9 @@ export default function UsersContent() {
             canEdit={canEdit()}
           />
         )}
-      </Card>
+      </div>
 
-      {/* Modal de Formulário */}
+      {/* Modais */}
       <Modal
         isOpen={showModal}
         onClose={handleCloseModal}
@@ -507,7 +368,6 @@ export default function UsersContent() {
         />
       </Modal>
 
-      {/* Modal de Usuários Inativos */}
       <InactiveUsersModal
         isOpen={showInactiveModal}
         onClose={() => setShowInactiveModal(false)}

@@ -2,7 +2,7 @@
 // ============= src/app/login/page.js =============
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +22,8 @@ import toast from "react-hot-toast";
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Fix: window não existe no servidor (SSR). Usar estado inicializado no cliente via useEffect.
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
 
@@ -35,6 +37,13 @@ export default function LoginPage() {
       senha: "",
     },
   });
+
+  useEffect(() => {
+    const checkScreen = () => setIsLargeScreen(window.innerWidth > 1024);
+    checkScreen();
+    window.addEventListener("resize", checkScreen);
+    return () => window.removeEventListener("resize", checkScreen);
+  }, []);
 
   const onSubmit = async (data, event) => {
     event?.preventDefault();
@@ -129,7 +138,7 @@ export default function LoginPage() {
           width: "100%",
           maxWidth: "1200px",
           display: "grid",
-          gridTemplateColumns: window?.innerWidth > 1024 ? "1fr 1fr" : "1fr",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(480px, 100%), 1fr))",
           gap: "3rem",
           alignItems: "center",
           position: "relative",
@@ -137,7 +146,7 @@ export default function LoginPage() {
         }}
       >
         {/* Seção de Boas-vindas - Visível apenas em telas grandes */}
-        {window?.innerWidth > 1024 && (
+        {isLargeScreen && (
           <div
             style={{
               color: "white",
@@ -236,7 +245,7 @@ export default function LoginPage() {
             border: "1px solid rgba(255, 255, 255, 0.3)",
             width: "100%",
             maxWidth: "480px",
-            justifySelf: window?.innerWidth > 1024 ? "center" : "center",
+            justifySelf: "center",
             margin: "0 auto",
           }}
         >

@@ -1,35 +1,34 @@
 // Gráfico de dados dos sensores
 // ============= src/components/dashboard/SensorChart.js =============
+// Ajuste #17: campo corrigido de precipitacaoPrevisao24h → chuvaFutura24h
+// Ajuste #18: riscoIntegrado (0–1) multiplicado por 100 para plotar na mesma escala (0–100)
+// Ajuste #19: timestamps com timeZone: 'America/Sao_Paulo' em vez de sem timezone
 'use client';
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { formatDate } from '@/utils';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend
+} from 'recharts';
+import { formatTimeOnly, formatDateBR } from '@/utils';
 
 export default function SensorChart({ data = [] }) {
-  // Processar dados para o gráfico com horário local (UTC-3)
-  // Primeiro ordenar por timestamp (mais antigo para mais recente) e pegar os últimos 20
+  // Ordenar por timestamp (mais antigo → mais recente) e pegar os últimos 20
   const sortedData = [...data]
     .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
     .slice(-20);
 
   const chartData = sortedData.map(item => {
-    const utcDate = new Date(item.timestamp);
-    
     return {
-      time: utcDate.toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      }),
-      timestamp: utcDate.toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
+      // Ajuste #19: formatTimeOnly usa timeZone America/Sao_Paulo
+      time: formatTimeOnly(item.timestamp),
+      // Ajuste #19: tooltip usa formatDateBR com timezone correto
+      timestampFormatado: formatDateBR(item.timestamp),
       umidade: parseFloat(item.umidadeSolo) || 0,
       precipitacao24h: parseFloat(item.precipitacao24h) || 0,
-      precipitacaoPrevisao24h: parseFloat(item.precipitacaoPrevisao24h) || 0,
-      risco: parseFloat(item.riscoIntegrado) || 0
+      // Ajuste #17: campo correto é chuvaFutura24h, não precipitacaoPrevisao24h
+      chuvaFutura24h: parseFloat(item.chuvaFutura24h) || 0,
+      // Ajuste #18: riscoIntegrado (0–1) → percentual (0–100) para mesma escala que umidade
+      risco: (parseFloat(item.riscoIntegrado) || 0) * 100
     };
   });
 
@@ -41,10 +40,10 @@ export default function SensorChart({ data = [] }) {
     );
   }
 
-  // Tooltip customizado para mostrar mais informações
-  const CustomTooltip = ({ active, payload, label }) => {
+  // Tooltip customizado com timezone correto
+  const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload;
+      const d = payload[0].payload;
       return (
         <div style={{
           backgroundColor: 'var(--white)',
@@ -55,11 +54,11 @@ export default function SensorChart({ data = [] }) {
           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
         }}>
           <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: 'var(--gray-700)' }}>
-            {data.timestamp}
+            {d.timestampFormatado}
           </p>
           {payload.map((entry, index) => (
-            <p key={index} style={{ 
-              margin: '0.25rem 0', 
+            <p key={index} style={{
+              margin: '0.25rem 0',
               color: entry.color,
               display: 'flex',
               justifyContent: 'space-between',
@@ -67,9 +66,11 @@ export default function SensorChart({ data = [] }) {
             }}>
               <span>{entry.name}:</span>
               <span style={{ fontWeight: '600' }}>
-                {entry.value}
-                {entry.dataKey === 'umidade' ? '%' : 
-                 entry.dataKey === 'risco' ? '%' : 'mm'}
+                {entry.dataKey === 'risco'
+                  ? `${entry.value.toFixed(1)}%`
+                  : entry.dataKey === 'umidade'
+                    ? `${entry.value.toFixed(1)}%`
+                    : `${entry.value.toFixed(1)}mm`}
               </span>
             </p>
           ))}
@@ -84,61 +85,60 @@ export default function SensorChart({ data = [] }) {
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-200)" />
-          <XAxis 
-            dataKey="time" 
+          <XAxis
+            dataKey="time"
             stroke="var(--gray-400)"
             fontSize={12}
             tick={{ fontSize: 10 }}
           />
-          <YAxis 
+          <YAxis
             stroke="var(--gray-400)"
             fontSize={12}
             tick={{ fontSize: 10 }}
+            domain={[0, 'auto']}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend 
-            wrapperStyle={{ fontSize: '12px' }}
-          />
-          
-          {/* Linha de Umidade do Solo */}
-          <Line 
-            type="monotone" 
-            dataKey="umidade" 
-            stroke="var(--terracotta)" 
+          <Legend wrapperStyle={{ fontSize: '12px' }} />
+
+          {/* Umidade do Solo */}
+          <Line
+            type="monotone"
+            dataKey="umidade"
+            stroke="var(--terracotta)"
             strokeWidth={2}
             name="Umidade (%)"
             dot={{ fill: 'var(--terracotta)', strokeWidth: 2, r: 4 }}
             activeDot={{ r: 6, fill: 'var(--terracotta)' }}
           />
-          
-          {/* Linha de Precipitação 24h */}
-          <Line 
-            type="monotone" 
-            dataKey="precipitacao24h" 
-            stroke="var(--primary-blue)" 
+
+          {/* Precipitação 24h */}
+          <Line
+            type="monotone"
+            dataKey="precipitacao24h"
+            stroke="var(--primary-blue)"
             strokeWidth={2}
             name="Precipitação 24h (mm)"
             dot={{ fill: 'var(--primary-blue)', strokeWidth: 2, r: 4 }}
             activeDot={{ r: 6, fill: 'var(--primary-blue)' }}
           />
-          
-          {/* Linha de Precipitação Previsão 24h */}
-          <Line 
-            type="monotone" 
-            dataKey="precipitacaoPrevisao24h" 
-            stroke="var(--primary-blue-light)" 
+
+          {/* Chuva Futura 24h — Ajuste #17: dataKey corrigido */}
+          <Line
+            type="monotone"
+            dataKey="chuvaFutura24h"
+            stroke="var(--primary-blue-light)"
             strokeWidth={2}
             strokeDasharray="5 5"
             name="Previsão 24h (mm)"
             dot={{ fill: 'var(--primary-blue-light)', strokeWidth: 2, r: 3 }}
             activeDot={{ r: 5, fill: 'var(--primary-blue-light)' }}
           />
-          
-          {/* Linha de Risco Integrado */}
-          <Line 
-            type="monotone" 
-            dataKey="risco" 
-            stroke="var(--red-500)" 
+
+          {/* Risco Integrado — Ajuste #18: já em percentual (0–100) */}
+          <Line
+            type="monotone"
+            dataKey="risco"
+            stroke="var(--red-500)"
             strokeWidth={2}
             name="Risco (%)"
             dot={{ fill: 'var(--red-500)', strokeWidth: 2, r: 4 }}

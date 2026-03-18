@@ -1,0 +1,30 @@
+# Dependências — reinstaladas no build
+node_modules
+
+# Build anterior — gerado no container
+dist
+
+# Arquivos de ambiente — injetados pelo docker-compose
+.env
+.env.*
+
+# Prisma migrations desnecessárias no runtime
+prisma/migrations
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor e SO
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Docs e testes
+README.md
+*.md

@@ -1,44 +1,32 @@
-// Modal de usuários inativos
+// Modal de usuários inativos — Dica contextual por tipo
 // ============= src/components/users/InactiveUsersModal.js =============
 'use client';
 
 import { useState, useEffect } from 'react';
 import { userService } from '@/services/api';
-import { formatDate } from '@/utils';
+import { formatDateBR } from '@/utils';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { Users, UserCheck, Phone, Shield, RefreshCw } from 'lucide-react';
+import { Users, UserCheck, Phone, Shield, RefreshCw, BellOff, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated }) {
   const [inactiveUsers, setInactiveUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [reactivating, setReactivating] = useState(null);
+  const [loading,       setLoading]       = useState(false);
+  const [reactivating,  setReactivating]  = useState(null);
 
   useEffect(() => {
-    if (isOpen) {
-      loadInactiveUsers();
-    }
+    if (isOpen) loadInactiveUsers();
   }, [isOpen]);
 
   const loadInactiveUsers = async () => {
     setLoading(true);
     try {
-      console.log('🔍 Carregando usuários inativos...');
       const response = await userService.getInactiveUsers({ limite: 50 });
-      console.log('📦 Response usuários inativos:', response);
-      
-      if (response.success) {
-        const usersData = Array.isArray(response.data) ? response.data : [];
-        console.log('✅ Usuários inativos encontrados:', usersData.length, usersData);
-        setInactiveUsers(usersData);
-      } else {
-        console.error('❌ Erro na resposta da API:', response);
-        setInactiveUsers([]);
-      }
+      setInactiveUsers(response.success && Array.isArray(response.data) ? response.data : []);
     } catch (error) {
-      console.error('❌ Erro ao carregar usuários inativos:', error);
+      console.error('Erro ao carregar inativos:', error);
       toast.error('Erro ao carregar usuários inativos');
       setInactiveUsers([]);
     } finally {
@@ -49,258 +37,149 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
   const handleReactivate = async (user) => {
     setReactivating(user.id);
     try {
-      console.log('🔄 Reativando usuário:', user.nome);
-      
-      // Determinar tipo de usuário baseado nos campos disponíveis
-      const isBasicUser = user.tipo === 'basico' || user.hasOwnProperty('telefone');
-      
-      if (isBasicUser) {
-        await userService.toggleBasicUserStatus(user.id, true);
-      } else {
-        await userService.toggleAdminUserStatus(user.id, true);
-      }
-      
-      toast.success(`${isBasicUser ? 'Usuário' : 'Administrador'} reativado com sucesso!`);
-      
-      // Remover da lista local
+      const isBasic = isBasicUser(user);
+      if (isBasic) await userService.toggleBasicUserStatus(user.id, true);
+      else         await userService.toggleAdminUserStatus(user.id, true);
+      toast.success(`${isBasic ? 'Usuário' : 'Administrador'} reativado com sucesso!`);
       setInactiveUsers(prev => prev.filter(u => u.id !== user.id));
-      
-      // Notificar componente pai para atualizar listas
-      if (onUserReactivated) {
-        onUserReactivated();
-      }
+      if (onUserReactivated) onUserReactivated();
     } catch (error) {
-      console.error('❌ Erro ao reativar usuário:', error);
-      const message = error.response?.data?.message || 'Erro ao reativar usuário';
-      toast.error(message);
+      toast.error(error.response?.data?.message || 'Erro ao reativar');
     } finally {
       setReactivating(null);
     }
   };
 
-  const getTypeIcon = (user) => {
-    const isBasicUser = user.tipo === 'basico' || user.hasOwnProperty('telefone');
-    return isBasicUser ? Users : Shield;
-  };
+  const isBasicUser     = (u) => u.tipo === 'basico' || u.hasOwnProperty('telefone');
+  const getTypeLabel    = (u) => u.perfil === 'super_admin' ? 'Super Admin' : u.perfil === 'admin' ? 'Admin' : 'Usuário Básico';
+  const getTypeColor    = (u) => isBasicUser(u) ? '#ea580c' : '#2563eb';
+  const getInicialBg    = (u) => isBasicUser(u) ? '#dbeafe' : '#fce7f3';
+  const getInicialColor = (u) => isBasicUser(u) ? '#1d4ed8' : '#9d174d';
 
-  const getTypeLabel = (user) => {
-    if (user.perfil === 'super_admin') return 'Super Admin';
-    if (user.perfil === 'admin') return 'Admin';
-    return 'Usuário Básico';
-  };
-
-  const getTypeColor = (user) => {
-    const isBasicUser = user.tipo === 'basico' || user.hasOwnProperty('telefone');
-    return isBasicUser ? '#ea580c' : '#2563eb'; // terracotta : blue
-  };
+  const nBasicos = inactiveUsers.filter(isBasicUser).length;
+  const nAdmins  = inactiveUsers.filter(u => !isBasicUser(u)).length;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Usuários Inativos"
-      size="large"
-    >
-      <div>
-        {/* Header com contador e botão atualizar */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '1.5rem'
-        }}>
-          <div style={{
-            fontSize: '0.875rem',
-            color: 'var(--gray-600)'
-          }}>
-            {loading ? 'Carregando...' : `${inactiveUsers.length} usuários inativos encontrados`}
-          </div>
-          
-          <Button
-            variant="outline"
-            size="small"
-            onClick={loadInactiveUsers}
-            loading={loading}
-            disabled={loading}
-          >
-            <RefreshCw size={14} />
-            Atualizar
+    <Modal isOpen={isOpen} onClose={onClose} title="Usuários Inativos" size="large">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+        {/* Header: contador + botão atualizar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+            {loading ? 'Carregando...' : inactiveUsers.length === 0 ? 'Nenhum usuário inativo' : (
+              <>
+                <strong style={{ color: '#374151' }}>{inactiveUsers.length}</strong>
+                {' '}usuário{inactiveUsers.length !== 1 ? 's' : ''} inativo{inactiveUsers.length !== 1 ? 's' : ''}
+                {nAdmins > 0 && nBasicos > 0 && (
+                  <span style={{ color: '#9ca3af', marginLeft: '0.375rem' }}>
+                    ({nAdmins} admin{nAdmins > 1 ? 's' : ''}, {nBasicos} básico{nBasicos > 1 ? 's' : ''})
+                  </span>
+                )}
+              </>
+            )}
+          </span>
+          <Button variant="outline" size="small" onClick={loadInactiveUsers} loading={loading} disabled={loading}>
+            <RefreshCw size={13} /> Atualizar
           </Button>
         </div>
 
-        {/* Conteúdo */}
+        {/* Corpo */}
         {loading ? (
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            padding: '3rem' 
-          }}>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
             <LoadingSpinner size="large" />
           </div>
         ) : inactiveUsers.length === 0 ? (
-          // Estado vazio
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '3rem' 
-          }}>
-            <div style={{
-              width: '4rem',
-              height: '4rem',
-              backgroundColor: '#dcfce7',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1rem auto'
-            }}>
-              <UserCheck size={24} color="#16a34a" />
+          <div style={{ textAlign: 'center', padding: '2.5rem', color: '#9ca3af' }}>
+            <div style={{ width: '3.5rem', height: '3.5rem', backgroundColor: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem' }}>
+              <UserCheck size={22} color="#16a34a" />
             </div>
-            <h3 style={{ 
-              margin: '0 0 0.5rem 0', 
-              color: 'var(--gray-700)' 
-            }}>
+            <p style={{ fontSize: '0.9rem', fontWeight: '600', color: '#374151', margin: '0 0 0.25rem' }}>
               Todos os usuários estão ativos!
-            </h3>
-            <p style={{ 
-              margin: 0, 
-              color: 'var(--gray-500)' 
-            }}>
-              Não há usuários desativados no momento.
             </p>
+            <p style={{ fontSize: '0.8rem', margin: 0 }}>Nenhum usuário desativado no momento.</p>
           </div>
         ) : (
-          // Lista de usuários inativos
-          <div style={{ 
-            maxHeight: '400px', 
-            overflowY: 'auto',
-            border: '1px solid var(--gray-200)',
-            borderRadius: '0.5rem'
-          }}>
+          <div style={{ maxHeight: '380px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}>
             {inactiveUsers.map((user, index) => {
-              const TypeIcon = getTypeIcon(user);
-              const isBasicUser = user.tipo === 'basico' || user.hasOwnProperty('telefone');
-              
+              const isBasic = isBasicUser(user);
+              const TypeIcon = isBasic ? Users : Shield;
+              const isLast   = index === inactiveUsers.length - 1;
+
               return (
-                <div 
+                <div
                   key={user.id}
-                  style={{
-                    padding: '1rem',
-                    borderBottom: index < inactiveUsers.length - 1 ? '1px solid var(--gray-100)' : 'none',
-                    transition: 'background-color 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--gray-50)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
+                  style={{ padding: '0.875rem 1rem', borderBottom: isLast ? 'none' : '1px solid #f3f4f6', transition: 'background 0.12s' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    {/* Informações do usuário */}
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '1rem',
-                      flex: 1
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {/* Inicial */}
+                    <div style={{
+                      width: '2.25rem', height: '2.25rem', borderRadius: '50%', flexShrink: 0,
+                      backgroundColor: getInicialBg(user), color: getInicialColor(user),
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.85rem', fontWeight: '700',
                     }}>
-                      {/* Avatar */}
-                      <div style={{
-                        width: '2.5rem',
-                        height: '2.5rem',
-                        borderRadius: '50%',
-                        backgroundColor: getTypeColor(user),
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: '1rem',
-                        fontWeight: '500'
-                      }}>
-                        {user.nome?.charAt(0)?.toUpperCase() || 'U'}
+                      {user.nome?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+
+                    {/* Dados */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Nome + badge */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.125rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#111827' }}>
+                          {user.nome}
+                        </span>
+                        <span style={{
+                          padding: '0.1rem 0.4rem', borderRadius: '0.25rem',
+                          fontSize: '0.68rem', fontWeight: '600',
+                          backgroundColor: `${getTypeColor(user)}18`, color: getTypeColor(user),
+                          display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
+                        }}>
+                          <TypeIcon size={10} /> {getTypeLabel(user)}
+                        </span>
                       </div>
 
-                      {/* Dados */}
-                      <div style={{ flex: 1 }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          marginBottom: '0.25rem'
-                        }}>
-                          <span style={{
-                            fontSize: '1rem',
-                            fontWeight: '600',
-                            color: 'var(--gray-800)'
-                          }}>
-                            {user.nome}
-                          </span>
-                          
-                          <span style={{
-                            padding: '0.125rem 0.5rem',
-                            backgroundColor: `${getTypeColor(user)}20`,
-                            color: getTypeColor(user),
-                            borderRadius: '0.25rem',
-                            fontSize: '0.75rem',
-                            fontWeight: '500',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem'
-                          }}>
-                            <TypeIcon size={12} />
-                            {getTypeLabel(user)}
-                          </span>
+                      {/* Email */}
+                      <div style={{ fontSize: '0.78rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {user.email}
+                      </div>
+
+                      {/* Telefone (só básico) */}
+                      {isBasic && user.telefone && (
+                        <div style={{ fontSize: '0.72rem', color: '#9ca3af', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.1rem' }}>
+                          <Phone size={11} /> {user.telefone}
                         </div>
-                        
-                        <div style={{
-                          fontSize: '0.875rem',
-                          color: 'var(--gray-600)',
-                          marginBottom: '0.25rem'
-                        }}>
-                          {user.email}
-                        </div>
-                        
-                        {isBasicUser && user.telefone && (
-                          <div style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--gray-500)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            marginBottom: '0.25rem'
-                          }}>
-                            <Phone size={12} />
-                            {user.telefone}
-                          </div>
-                        )}
-                        
-                        <div style={{
-                          fontSize: '0.75rem',
-                          color: 'var(--gray-500)'
-                        }}>
-                          Desativado em: {formatDate(user.updatedAt)}
-                        </div>
+                      )}
+
+                      {/* Data de desativação */}
+                      <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.1rem' }}>
+                        Desativado em: {formatDateBR(user.updatedAt)}
+                      </div>
+
+                      {/* Impacto contextual por tipo — linha destacada */}
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                        marginTop: '0.3rem', padding: '0.15rem 0.45rem',
+                        borderRadius: '0.25rem', fontSize: '0.68rem', fontWeight: '500',
+                        backgroundColor: isBasic ? '#fff7ed' : '#fef2f2',
+                        color: isBasic ? '#c2410c' : '#dc2626',
+                      }}>
+                        {isBasic
+                          ? <><BellOff size={10} /> Não recebe notificações de alerta</>
+                          : <><Lock size={10} /> Sem acesso ao sistema</>}
                       </div>
                     </div>
 
-                    {/* Botão de reativar */}
+                    {/* Botão reativar */}
                     <Button
-                      variant="outline"
-                      size="small"
+                      variant="outline" size="small"
                       onClick={() => handleReactivate(user)}
                       loading={reactivating === user.id}
                       disabled={reactivating === user.id}
-                      style={{
-                        backgroundColor: '#dcfce7',
-                        borderColor: '#86efac',
-                        color: '#16a34a'
-                      }}
+                      style={{ backgroundColor: '#f0fdf4', borderColor: '#86efac', color: '#16a34a', flexShrink: 0 }}
                     >
-                      <UserCheck size={14} />
+                      <UserCheck size={13} />
                       {reactivating === user.id ? 'Reativando...' : 'Reativar'}
                     </Button>
                   </div>
@@ -310,19 +189,13 @@ export default function InactiveUsersModal({ isOpen, onClose, onUserReactivated 
           </div>
         )}
 
-        {/* Dica informativa */}
-        <div style={{
-          marginTop: '1.5rem',
-          padding: '1rem',
-          backgroundColor: '#eff6ff',
-          border: '1px solid #bfdbfe',
-          borderRadius: '0.375rem',
-          fontSize: '0.875rem',
-          color: '#1e40af'
-        }}>
-          <strong>💡 Dica:</strong> Usuários inativos não podem fazer login no sistema, mas seus dados
-          permanecem salvos. Você pode reativá-los a qualquer momento clicando em "Reativar".
-        </div>
+        {/* Nota de rodapé universal */}
+        {inactiveUsers.length > 0 && (
+          <div style={{ padding: '0.625rem 0.875rem', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.375rem', fontSize: '0.78rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <UserCheck size={13} style={{ flexShrink: 0 }} />
+            Dados permanecem salvos. Reative qualquer usuário a qualquer momento.
+          </div>
+        )}
       </div>
     </Modal>
   );

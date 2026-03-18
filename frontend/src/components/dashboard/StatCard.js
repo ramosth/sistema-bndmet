@@ -1,95 +1,28 @@
-// Cards de estatísticas
+// StatCard — KPI compacto para o dashboard
 // ============= src/components/dashboard/StatCard.js =============
-import { TrendingUp } from 'lucide-react';
 
-export default function StatCard({ 
-  title, 
-  value, 
-  icon: Icon, 
-  color, 
-  trend, 
-  status = 'normal' 
-}) {
-  const getStatusColor = () => {
-    switch (status) {
-      case 'critical': return 'var(--red-500)';
-      case 'warning': return 'var(--yellow-500)';
-      case 'normal': return 'var(--green-500)';
-      default: return color;
-    }
-  };
-
+export default function StatCard({ icon: Icon, iconColor, value, label, sub, valueColor }) {
   return (
-    <div className="card">
-      <div className="card-body">
-        <div className="flex-between mb-4">
-          <div>
-            <p style={{
-              fontSize: '0.875rem',
-              color: 'var(--gray-600)',
-              margin: '0 0 0.5rem 0'
-            }}>
-              {title}
-            </p>
-            <p style={{
-              fontSize: '1.5rem',
-              fontWeight: '700',
-              color: 'var(--gray-800)',
-              margin: 0
-            }}>
-              {value}
-            </p>
-          </div>
-          
-          <div style={{
-            width: '3rem',
-            height: '3rem',
-            backgroundColor: `${getStatusColor()}20`,
-            borderRadius: '0.75rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Icon size={24} color={getStatusColor()} />
-          </div>
+    <div style={{
+      padding: '1rem 1.25rem', backgroundColor: 'white',
+      borderRadius: '0.5rem', border: '1px solid #e5e7eb',
+      display: 'flex', alignItems: 'center', gap: '0.875rem',
+    }}>
+      <div style={{
+        width: '2.5rem', height: '2.5rem', borderRadius: '0.5rem',
+        backgroundColor: `${iconColor}18`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        <Icon size={20} color={iconColor} />
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: '1.375rem', fontWeight: '700', color: valueColor || '#111827', lineHeight: 1.2 }}>
+          {value}
         </div>
-
-        {trend && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.25rem'
-          }}>
-            <TrendingUp size={14} color="var(--green-500)" />
-            <span style={{
-              fontSize: '0.75rem',
-              color: 'var(--green-500)',
-              fontWeight: '500'
-            }}>
-              {trend}
-            </span>
-            <span style={{
-              fontSize: '0.75rem',
-              color: 'var(--gray-500)'
-            }}>
-              vs. mês anterior
-            </span>
-          </div>
-        )}
-
-        {status !== 'normal' && (
-          <div style={{
-            marginTop: '0.5rem',
-            padding: '0.25rem 0.5rem',
-            backgroundColor: `${getStatusColor()}20`,
-            borderRadius: '0.25rem',
-            fontSize: '0.75rem',
-            color: getStatusColor(),
-            fontWeight: '500'
-          }}>
-            {status === 'critical' ? 'Atenção Necessária' : 'Monitorar'}
-          </div>
-        )}
+        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151', marginTop: '0.1rem' }}>
+          {label}
+        </div>
+        {sub && <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: '0.1rem' }}>{sub}</div>}
       </div>
     </div>
   );

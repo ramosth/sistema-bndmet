@@ -1,163 +1,88 @@
-// Modal de confirmação de exclusão de usuário
-// ============= src/components/users/DeleteConfirmModal.js - NOVO =============
+// Modal de confirmação de desativação — Layout compacto sem scroll
+// ============= src/components/users/DeleteConfirmModal.js =============
 'use client';
 
-import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
-import { AlertTriangle, User, UserX } from 'lucide-react';
+import { Shield, UserX } from 'lucide-react';
 
-export default function DeleteConfirmModal({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  user, 
-  loading = false 
-}) {
+export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, user, loading = false }) {
   if (!user) return null;
 
-  const isBasicUser = user.hasOwnProperty('telefone');
+  const isBasic      = user.hasOwnProperty('telefone') && user.hasOwnProperty('receberNotificacoes');
+  const perfilLabel  = user.perfil === 'super_admin' ? 'Super Admin' : user.perfil === 'admin' ? 'Admin' : 'Usuário Básico';
+  const inicialBg    = isBasic ? '#dbeafe' : '#fce7f3';
+  const inicialColor = isBasic ? '#1d4ed8' : '#9d174d';
+
+  // Consequências específicas por tipo
+  const consequencias = isBasic
+    ? ['🔕 Não receberá notificações de alerta', '✅ Dados permanecem salvos']
+    : ['🔒 Sem acesso ao sistema', '🔕 Não receberá notificações', '✅ Dados permanecem salvos'];
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Confirmar Desativação"
-      size="medium"
-    >
-      <div>
-        {/* Ícone de aviso */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '4rem',
-          height: '4rem',
-          backgroundColor: 'var(--red-100)',
-          borderRadius: '50%',
-          margin: '0 auto 1.5rem auto'
-        }}>
-          <AlertTriangle size={28} color="var(--red-500)" />
-        </div>
+    <Modal isOpen={isOpen} onClose={onClose} title="Desativar usuário?" size="small">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-        {/* Informações do usuário */}
+        {/* Card compacto do usuário */}
         <div style={{
-          padding: '1rem',
-          backgroundColor: 'var(--gray-50)',
-          borderRadius: '0.5rem',
-          marginBottom: '1.5rem'
+          display: 'flex', alignItems: 'center', gap: '0.75rem',
+          padding: '0.75rem 1rem', backgroundColor: '#f9fafb',
+          borderRadius: '0.5rem', border: '1px solid #e5e7eb',
         }}>
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            marginBottom: '0.5rem'
+            width: '2.25rem', height: '2.25rem', borderRadius: '50%', flexShrink: 0,
+            backgroundColor: inicialBg, color: inicialColor,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '0.875rem', fontWeight: '700',
           }}>
-            <div style={{
-              width: '2.5rem',
-              height: '2.5rem',
-              borderRadius: '50%',
-              backgroundColor: isBasicUser ? 'var(--terracotta)' : 'var(--primary-blue)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '1rem',
-              fontWeight: '500'
-            }}>
-              {user.nome?.charAt(0)?.toUpperCase() || 'U'}
-            </div>
-            <div>
-              <div style={{
-                fontSize: '1rem',
-                fontWeight: '600',
-                color: 'var(--gray-800)'
-              }}>
+            {user.nome?.charAt(0)?.toUpperCase() || '?'}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#111827' }}>
                 {user.nome}
-              </div>
-              <div style={{
-                fontSize: '0.875rem',
-                color: 'var(--gray-600)'
+              </span>
+              <span style={{
+                padding: '0.1rem 0.4rem', borderRadius: '0.25rem',
+                fontSize: '0.68rem', fontWeight: '600',
+                backgroundColor: isBasic ? '#eff6ff' : '#fef2f2',
+                color: isBasic ? '#2563eb' : '#dc2626',
+                display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
               }}>
-                {user.email}
-              </div>
+                <Shield size={10} /> {perfilLabel}
+              </span>
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user.email}
             </div>
           </div>
-          
-          {user.perfil && (
-            <div style={{
-              fontSize: '0.75rem',
-              color: 'var(--gray-500)',
-              fontStyle: 'italic'
-            }}>
-              Perfil: {user.perfil === 'super_admin' ? 'Super Administrador' : 
-                      user.perfil === 'admin' ? 'Administrador' : 'Usuário Básico'}
-            </div>
-          )}
         </div>
 
-        {/* Mensagem de confirmação */}
-        <div style={{
-          textAlign: 'center',
-          marginBottom: '1.5rem'
-        }}>
-          <h3 style={{
-            margin: '0 0 1rem 0',
-            fontSize: '1.125rem',
-            color: 'var(--gray-800)'
-          }}>
-            Desativar {isBasicUser ? 'usuário' : 'administrador'}?
-          </h3>
-          
-          <p style={{
-            margin: '0 0 1rem 0',
-            color: 'var(--gray-600)',
-            lineHeight: 1.5
-          }}>
-            Esta ação irá <strong>desativar</strong> o {isBasicUser ? 'usuário' : 'administrador'}.
-            O usuário <strong>não será deletado</strong> do sistema, apenas ficará inativo.
+        {/* Descrição em 1 linha */}
+        <p style={{ margin: 0, fontSize: '0.875rem', color: '#374151', lineHeight: 1.5 }}>
+          O {isBasic ? 'usuário' : 'administrador'} ficará <strong>inativo</strong> mas{' '}
+          <strong>não será deletado</strong> — pode ser reativado a qualquer momento.
+        </p>
+
+        {/* Consequências compactas */}
+        <div style={{ padding: '0.75rem 1rem', backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem' }}>
+          <p style={{ margin: '0 0 0.4rem', fontSize: '0.75rem', fontWeight: '700', color: '#92400e' }}>
+            ⚠️ Consequências:
           </p>
-
-                 <div style={{
-            padding: '1rem',
-            backgroundColor: 'var(--yellow-50)',
-            border: '1px solid var(--yellow-200)',
-            borderRadius: '0.375rem',
-            fontSize: '0.875rem',
-            color: 'var(--yellow-800)'
-          }}>
-            <strong>Consequências da desativação:</strong>
-            <ul style={{ margin: '0.5rem 0 0 0', paddingLeft: '1rem' }}>
-              <li>Não poderá fazer login no sistema</li>
-              <li>Não receberá notificações</li>
-              <li>Dados permanecerão no sistema</li>
-              <li>Pode ser reativado posteriormente</li>
-            </ul>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            {consequencias.map((item, i) => (
+              <span key={i} style={{ fontSize: '0.78rem', color: '#92400e' }}>{item}</span>
+            ))}
           </div>
         </div>
 
-        {/* Botões de ação */}
-        <div style={{
-          display: 'flex',
-          gap: '0.5rem',
-          justifyContent: 'flex-end'
-        }}>
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={loading}
-          >
+        {/* Botões */}
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
-          
-          <Button
-            variant="danger"
-            onClick={onConfirm}
-            loading={loading}
-            disabled={loading}
-          >
-            <UserX size={16} />
-            Desativar {isBasicUser ? 'Usuário' : 'Administrador'}
+          <Button variant="danger" onClick={onConfirm} loading={loading} disabled={loading}>
+            <UserX size={15} /> Desativar
           </Button>
         </div>
       </div>
