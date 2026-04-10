@@ -32,8 +32,8 @@ const fmtRisco = (item) => {
 
 const riscoColor = (item) => {
   const v = item?.indiceRisco ?? (parseFloat(item?.riscoIntegrado) * 100);
-  if (v > 80) return '#dc2626';
-  if (v > 50) return '#d97706';
+  if (v > 75) return '#dc2626';
+  if (v > 45) return '#d97706';
   return '#16a34a';
 };
 
@@ -105,7 +105,9 @@ export default function SensorsContent() {
     nivelAlerta: 'all',
   });
 
-  useEffect(() => { loadSensorData(); loadSensorStats(); }, [selectedPeriod, filters.nivelAlerta]);
+  // filters.nivelAlerta NÃO é dependência — filtro de nível é aplicado localmente
+  // sobre sensorData via filteredData, sem nova chamada à API
+  useEffect(() => { loadSensorData(); loadSensorStats(); }, [selectedPeriod]);
 
   const loadSensorData = async () => {
     setLoading(true);
@@ -215,18 +217,20 @@ export default function SensorsContent() {
 
   // Calcular estatísticas diretamente de sensorData para refletir o período selecionado
   // getStatistics() sempre retorna 24h — para 7d/30d/filtro por data usamos os dados carregados
-  const use24hStats = selectedPeriod === '24h' && !activeDateRange;
+  // Desabilitar stats da API quando nível filtrado — API retorna totais sem filtro de nível
+  const use24hStats = selectedPeriod === '24h' && !activeDateRange && filters.nivelAlerta === 'all';
   const sensorStats24h = stats?.geral?.estatisticas24h || {};
 
+  // KPIs refletem o mesmo conjunto da tabela (período + nível selecionado)
   const periodoStats = (() => {
-    if (!sensorData.length) return { totalLeituras: 0, mediaUmidade: 0, mediaRisco: 0, mediaPrecipitacao: 0, alertasCriticos: 0 };
+    if (!filteredData.length) return { totalLeituras: 0, mediaUmidade: 0, mediaRisco: 0, mediaPrecipitacao: 0, alertasCriticos: 0 };
     const n = (v) => { const x = parseFloat(v); return isNaN(x) ? 0 : x; };
-    const total  = sensorData.length;
-    const criticos = sensorData.filter(d => d.nivelAlerta === 'VERMELHO').length;
-    const medUmid  = sensorData.reduce((a, d) => a + n(d.umidadeSolo), 0) / total;
-    const medPrec  = sensorData.reduce((a, d) => a + n(d.precipitacao24h), 0) / total;
+    const total    = filteredData.length;
+    const criticos = filteredData.filter(d => d.nivelAlerta === 'VERMELHO').length;
+    const medUmid  = filteredData.reduce((a, d) => a + n(d.umidadeSolo), 0) / total;
+    const medPrec  = filteredData.reduce((a, d) => a + n(d.precipitacao24h), 0) / total;
     // risco: usar indiceRisco (0-100) se disponível, senão riscoIntegrado × 100
-    const medRisco = sensorData.reduce((a, d) => a + (d.indiceRisco != null ? n(d.indiceRisco) : n(d.riscoIntegrado) * 100), 0) / total;
+    const medRisco = filteredData.reduce((a, d) => a + (d.indiceRisco != null ? n(d.indiceRisco) : n(d.riscoIntegrado) * 100), 0) / total;
     return { totalLeituras: total, mediaUmidade: medUmid, mediaRisco: medRisco, mediaPrecipitacao: medPrec, alertasCriticos: criticos };
   })();
 
@@ -240,8 +244,8 @@ export default function SensorsContent() {
   };
 
   const mediaRiscoPct  = periodoStats.mediaRisco.toFixed(1);
-  const mediaConfiab   = sensorData.length
-    ? (sensorData.reduce((a, d) => a + (parseFloat(d.confiabilidade) || 0), 0) / sensorData.length).toFixed(0)
+  const mediaConfiab   = filteredData.length
+    ? (filteredData.reduce((a, d) => a + (parseFloat(d.confiabilidade) || 0), 0) / filteredData.length).toFixed(0)
     : '0';
   const det = ultimaLeitura.dadosBrutos?.confiabilidade_detalhes || null;
   const descontoInfo = {
@@ -249,6 +253,13 @@ export default function SensorsContent() {
     qualidade_bndmet: 'Qualidade BNDMET <80%', owm_indisponivel: 'OWM indisponível',
     wifi_desconectado: 'WiFi desconectado', buffer_insuficiente: 'Buffer insuficiente',
   };
+
+  // Label do nível ativo para exibir nos sub dos KPIs quando filtrado
+  const nivelLabel = filters.nivelAlerta === 'all' ? null : {
+    VERDE:    '🟢 Nível: Verde',
+    AMARELO:  '🟡 Nível: Amarelo',
+    VERMELHO: '🔴 Nível: Vermelho',
+  }[filters.nivelAlerta] || null;
 
   // ── JSX ──────────────────────────────────────────────────────────────────
   return (
@@ -345,15 +356,15 @@ export default function SensorsContent() {
         </h3>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
-        <KpiCard icon={Activity} iconColor="#2563eb" value={sensorStats.totalLeituras || 0} label="Total de Leituras" sub={periodoLabel} />
+        <KpiCard icon={Activity} iconColor="#2563eb" value={sensorStats.totalLeituras || 0} label="Total de Leituras" sub={nivelLabel ? `${periodoLabel} · ${nivelLabel}` : periodoLabel} />
         <KpiCard icon={Droplets} iconColor="#0891b2"
           value={`${fmt(sensorStats.mediaUmidade)}%`}
           valueColor={parseFloat(sensorStats.mediaUmidade) >= 25 ? '#dc2626' : parseFloat(sensorStats.mediaUmidade) >= 15 ? '#d97706' : '#0891b2'}
           label="Umidade Média" sub="limiar crítico: 25%" />
         <KpiCard icon={Shield} iconColor="#dc2626"
           value={`${mediaRiscoPct}%`}
-          valueColor={parseFloat(mediaRiscoPct) > 80 ? '#dc2626' : parseFloat(mediaRiscoPct) > 50 ? '#d97706' : '#16a34a'}
-          label="Risco Médio (FR)" sub="Verde ≤50% / Amar. ≤80%" />
+          valueColor={parseFloat(mediaRiscoPct) > 75 ? '#dc2626' : parseFloat(mediaRiscoPct) > 45 ? '#d97706' : '#16a34a'}
+          label="Risco Médio (FR)" sub="Verde ≤45% / Amar. ≤75%" />
         <KpiCard icon={Cloud} iconColor="#1d4ed8"
           value={`${fmt(sensorStats.mediaPrecipitacao)} mm`}
           label="Precip. Média 24h" sub="BNDMET D6594 I006" />
@@ -365,7 +376,7 @@ export default function SensorsContent() {
           iconColor={sensorStats.alertasCriticos > 0 ? '#dc2626' : '#16a34a'}
           value={sensorStats.alertasCriticos || 0}
           valueColor={sensorStats.alertasCriticos > 0 ? '#dc2626' : '#16a34a'}
-          label="Alertas Críticos" sub={periodoLabel} />
+          label="Alertas Críticos" sub={nivelLabel || periodoLabel} />
       </div>
 
       {/* ── BLOCO 3: Painel da Última Leitura ─────────────────────────── */}

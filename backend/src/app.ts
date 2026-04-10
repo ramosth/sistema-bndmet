@@ -12,10 +12,15 @@ import {
 import routes from './routes';
 import docsRoutes from './routes/docsRoutes';
 import { setupSwagger } from './config/swagger';
+import { EmailService } from './services/emailService';
 import helmet from 'helmet';
 import cors from 'cors';
 
 const app = express();
+
+// ========== INICIALIZAÇÃO DOS SERVIÇOS ==========
+// Inicializar EmailService na subida do servidor
+EmailService.init();
 
 // Middlewares de segurança
 app.use(helmet());

@@ -110,7 +110,7 @@ API completa para monitoramento de segurança de barragens com:
           schema: {
             type: 'string',
             format: 'date-time',
-            example: '2025-07-01T00:00:00Z'
+            example: '2026-07-01T00:00:00Z'
           }
         },
         DateEndParam: {
@@ -121,7 +121,7 @@ API completa para monitoramento de segurança de barragens com:
           schema: {
             type: 'string',
             format: 'date-time',
-            example: '2025-07-05T23:59:59Z'
+            example: '2026-07-05T23:59:59Z'
           }
         }
       },
@@ -251,7 +251,7 @@ API completa para monitoramento de segurança de barragens com:
             ultimoLogin: {
               type: 'string',
               format: 'date-time',
-              example: '2025-07-05T19:12:26.167Z',
+              example: '2026-07-05T19:12:26.167Z',
               nullable: true
             },
             createdAt: { type: 'string', format: 'date-time' },

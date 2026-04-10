@@ -145,10 +145,10 @@ export class SensorService {
           nivelLog    = 'CRITICAL';
         }
       } else if (dados.riscoIntegrado !== undefined && dados.riscoIntegrado !== null) {
-        if (dados.riscoIntegrado <= 0.50) {
+        if (dados.riscoIntegrado <= 0.45) {
           nivelLog    = 'INFO';
           mensagemLog = `Dados recebidos — situação NORMAL (risco ${(dados.riscoIntegrado * 100).toFixed(0)}%, confiab. ${dados.confiabilidade ?? '?'}%)`;
-        } else if (dados.riscoIntegrado <= 0.80) {
+        } else if (dados.riscoIntegrado <= 0.75) {
           nivelLog    = 'WARNING';
           mensagemLog = `Dados recebidos — ATENÇÃO necessária (risco ${(dados.riscoIntegrado * 100).toFixed(0)}%, confiab. ${dados.confiabilidade ?? '?'}%)`;
         } else {

@@ -536,7 +536,7 @@ export default function LandingPage() {
             margin: 0,
             opacity: 0.8
           }}>
-            © 2025 BNDMET Monitor - Trabalho de Conclusão de Curso | 
+            © 2026 BNDMET Monitor - Trabalho de Conclusão de Curso | 
             Sistema de Monitoramento de Barragens de Rejeito
           </p>
         </div>

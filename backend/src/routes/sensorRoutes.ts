@@ -473,7 +473,7 @@ router.get('/ultimas', verificarAutenticacao, SensorController.buscarUltimas);
  *           type: string
  *           format: date-time
  *         description: Data de início do período (ISO 8601)
- *         example: "2025-01-01T00:00:00Z"
+ *         example: "2026-01-01T00:00:00Z"
  *       - in: query
  *         name: dataFim
  *         required: true
@@ -481,7 +481,7 @@ router.get('/ultimas', verificarAutenticacao, SensorController.buscarUltimas);
  *           type: string
  *           format: date-time
  *         description: Data de fim do período (ISO 8601)
- *         example: "2025-01-31T23:59:59Z"
+ *         example: "2026-01-31T23:59:59Z"
  *       - in: query
  *         name: pagina
  *         schema:

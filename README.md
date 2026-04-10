@@ -408,9 +408,9 @@ Para modo de produção, comentar no firmware:
 
 | Nível | Índice | Ação |
 |-------|--------|------|
-| 🟢 VERDE | 0–50% | Normal |
-| 🟡 AMARELO | 51–80% | Monitoramento intensivo |
-| 🔴 VERMELHO | > 80% | Evacuação recomendada |
+| 🟢 VERDE | 0–45% | Normal |
+| 🟡 AMARELO | 46–75% | Monitoramento intensivo |
+| 🔴 VERMELHO | > 75% | Evacuação recomendada |
 
 ### Confiabilidade do sistema
 

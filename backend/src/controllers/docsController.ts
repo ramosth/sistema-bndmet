@@ -63,7 +63,7 @@ export class DocsController {
                       "email": "admin@bndmet.com",
                       "perfil": "super_admin"
                     },
-                    "expiresAt": "2025-07-12T19:12:26.167Z"
+                    "expiresAt": "2026-07-12T19:12:26.167Z"
                   }
                 }
               },
@@ -379,7 +379,7 @@ export class DocsController {
               "pagina": "número da página (default: 1)",
               "limite": "itens por página (default: 50)"
             },
-            "example": "?dataInicio=2025-07-01T00:00:00Z&dataFim=2025-07-05T23:59:59Z",
+            "example": "?dataInicio=2026-07-01T00:00:00Z&dataFim=2026-07-05T23:59:59Z",
             "responses": {
               "200": "Leituras do período com paginação",
               "400": "Datas obrigatórias ou formato inválido"
@@ -592,7 +592,7 @@ export class DocsController {
         ],
         "common_patterns": {
           "pagination": "?pagina=1&limite=50",
-          "date_filter": "?dataInicio=2025-07-01T00:00:00Z&dataFim=2025-07-05T23:59:59Z",
+          "date_filter": "?dataInicio=2026-07-01T00:00:00Z&dataFim=2026-07-05T23:59:59Z",
           "log_filter": "?nivel=ERROR&componente=SENSOR&limite=100",
           "alert_filter": "?nivelAlerta=VERMELHO&limite=50"
         }

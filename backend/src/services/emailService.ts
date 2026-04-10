@@ -358,7 +358,7 @@ export class EmailService {
                 <span style="color: #374151; font-weight: 600; font-size: 16px;">Sistema TCC IPRJ</span>
             </div>
             <p style="margin: 0; color: #6b7280; font-size: 12px; line-height: 1.5;">
-                © 2025 Sistema TCC IPRJ - Monitoramento de Barragens<br>
+                © 2026 Sistema TCC IPRJ - Monitoramento de Barragens<br>
                 <span style="color: #9ca3af;">Este email foi enviado automaticamente, não responda a este endereço.</span>
             </p>
         </div>
@@ -407,9 +407,141 @@ Monitore a situação e tome as medidas preventivas adequadas.
 ` : ''}
 
 ========================================
-© 2025 Sistema TCC IPRJ
+© 2026 Sistema TCC IPRJ
 Este é um alerta automático do sistema.
     `;
+    }
+
+
+    // Enviar email de reset de senha
+    static async enviarResetSenha(
+        destinatario: { email: string; nome: string },
+        token: string,
+        expira: Date
+    ): Promise<{ sucesso: boolean; erro?: string }> {
+
+        console.log(`🔑 Enviando email de reset de senha para ${destinatario.email}`);
+
+        if (!this.transporter) {
+            console.log('⚠️ Modo simulação - email de reset não enviado pelo SMTP');
+            console.log(`   🔑 Token gerado: ${token}`);
+            return { sucesso: true };
+        }
+
+        const dataExpira = expira.toLocaleString('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        const htmlReset = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redefinição de Senha — TCC IPRJ</title>
+</head>
+<body style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;margin:0;padding:20px;background-color:#f5f5f5;">
+    <div style="max-width:600px;margin:0 auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);">
+        <div style="background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);color:white;padding:30px 20px;text-align:center;">
+            <h1 style="margin:0;font-size:24px;font-weight:700;">🔑 Redefinição de Senha</h1>
+            <p style="margin:8px 0 0 0;opacity:0.9;font-size:15px;">Sistema TCC IPRJ — Monitoramento de Barragens</p>
+        </div>
+        <div style="padding:40px 30px;">
+            <p style="font-size:17px;color:#333;margin-bottom:20px;font-weight:500;">
+                Olá <strong style="color:#2563eb;">${destinatario.nome}</strong>,
+            </p>
+            <p style="color:#4b5563;font-size:15px;margin-bottom:25px;">
+                Recebemos uma solicitação para redefinir a senha da sua conta de administrador.
+                Copie o token abaixo e cole na tela de redefinição de senha.
+            </p>
+            <div style="background:#f0f9ff;border:2px dashed #2563eb;border-radius:10px;padding:25px;text-align:center;margin:25px 0;">
+                <p style="color:#1e40af;font-size:13px;font-weight:600;margin:0 0 12px 0;text-transform:uppercase;letter-spacing:0.05em;">
+                    Seu Token de Redefinição
+                </p>
+                <div style="background:white;border:1px solid #bfdbfe;border-radius:8px;padding:15px;font-family:'Courier New',Courier,monospace;font-size:13px;color:#1e3a8a;word-break:break-all;letter-spacing:0.03em;font-weight:600;">
+                    ${token}
+                </div>
+                <p style="color:#6b7280;font-size:12px;margin:12px 0 0 0;">
+                    ⏱️ Válido até: <strong>${dataExpira}</strong> (2 horas)
+                </p>
+            </div>
+            <div style="background:#f8fafc;border-left:4px solid #2563eb;border-radius:6px;padding:20px;margin:25px 0;">
+                <p style="color:#1f2937;font-weight:600;margin:0 0 10px 0;font-size:14px;">Como usar:</p>
+                <ol style="color:#4b5563;font-size:14px;margin:0;padding-left:20px;line-height:1.8;">
+                    <li>Acesse a tela de login do sistema</li>
+                    <li>Clique em <strong>"Esqueci minha senha"</strong></li>
+                    <li>Clique em <strong>"Já tenho um token"</strong></li>
+                    <li>Cole o token acima no campo indicado</li>
+                    <li>Clique em <strong>"Validar Token"</strong></li>
+                    <li>Defina e confirme sua nova senha</li>
+                </ol>
+            </div>
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:15px;margin:20px 0;">
+                <p style="color:#92400e;font-size:13px;margin:0;">
+                    ⚠️ <strong>Importante:</strong> Se você não solicitou a redefinição de senha,
+                    ignore este e-mail. Sua senha permanece a mesma.
+                </p>
+            </div>
+            <p style="color:#9ca3af;font-size:13px;margin-top:25px;">
+                Este é um e-mail automático do Sistema TCC IPRJ. Não responda a este endereço.
+            </p>
+        </div>
+        <div style="background:#f9fafb;padding:20px 30px;border-top:1px solid #e5e7eb;text-align:center;">
+            <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.5;">
+                © 2026 Sistema TCC IPRJ — Monitoramento de Barragens<br>
+                <span style="color:#9ca3af;">Este e-mail foi gerado automaticamente.</span>
+            </p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+        const textoSimples = `
+🔑 REDEFINIÇÃO DE SENHA — SISTEMA TCC IPRJ
+==========================================
+
+Olá ${destinatario.nome},
+
+Seu token de redefinição de senha:
+
+${token}
+
+Válido até: ${dataExpira} (2 horas)
+
+COMO USAR:
+1. Acesse a tela de login
+2. Clique em "Esqueci minha senha"
+3. Clique em "Já tenho um token"
+4. Cole o token no campo indicado
+5. Clique em "Validar Token"
+6. Defina sua nova senha
+
+Se você não solicitou a redefinição, ignore este e-mail.
+
+==========================================
+© 2026 Sistema TCC IPRJ
+`;
+
+        try {
+            const info = await this.transporter.sendMail({
+                from: `"Sistema TCC IPRJ" <${env.SMTP_USER}>`,
+                to: destinatario.email,
+                subject: '🔑 Redefinição de senha — Sistema TCC IPRJ',
+                html: htmlReset,
+                text: textoSimples,
+                priority: 'high' as any,
+            });
+
+            console.log(`✅ Email de reset enviado para: ${destinatario.email}`);
+            console.log(`   📨 Message ID: ${info.messageId}`);
+            return { sucesso: true };
+
+        } catch (error: any) {
+            console.error(`❌ Erro ao enviar email de reset para ${destinatario.email}:`, error.message);
+            return { sucesso: false, erro: error.message };
+        }
     }
 
     // Fechar conexões (cleanup)

@@ -88,7 +88,7 @@ export default function UserForm({ user, userType, onSave, onCancel }) {
       }
       onSave();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Erro ao salvar usuário');
+      toast.error(error.response?.data?.error || 'Erro ao salvar usuário');
       console.error('Erro ao salvar usuário:', error);
     } finally {
       setLoading(false);

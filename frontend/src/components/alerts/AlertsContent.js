@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import {
-  AlertTriangle, Send, RefreshCw, Users,
+  AlertTriangle, Send, RefreshCw, Users, Bell,
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Zap
 } from "lucide-react";
 import Card from "@/components/ui/Card";
@@ -13,7 +13,7 @@ import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import AlertForm from "@/components/alerts/AlertForm";
-import { sensorService, alertService } from "@/services/api";
+import { sensorService, alertService, userService } from "@/services/api";
 import { formatDateBR, getAlertLevel } from "@/utils";
 import { usePagination } from "@/hooks";
 
@@ -79,6 +79,7 @@ export default function AlertsContent() {
   const [alertaOrigem,   setAlertaOrigem]   = useState(null);
   const [filtroNivel,    setFiltroNivel]    = useState("todos");
   const [expandedCard,   setExpandedCard]   = useState(null);
+  const [alertStats,     setAlertStats]     = useState(null);
 
   const pagination = usePagination(1, 10);
 
@@ -93,14 +94,23 @@ export default function AlertsContent() {
         throw new Error(response.message);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || error.message || "Erro ao carregar alertas");
+      toast.error(error.response?.data?.error || error.message || "Erro ao carregar alertas");
       setAllAlerts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadCriticalAlerts(); }, []);
+  const loadUserStats = async () => {
+    try {
+      const response = await userService.getUserStats();
+      if (response.success) setAlertStats(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas de alertas:', error);
+    }
+  };
+
+  useEffect(() => { loadCriticalAlerts(); loadUserStats(); }, []);
 
   // ── Filtro ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -137,7 +147,7 @@ export default function AlertsContent() {
         throw new Error(response.message);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || error.message || "Erro ao enviar alerta");
+      toast.error(error.response?.data?.error || error.message || "Erro ao enviar alerta");
     } finally {
       setSendingAlert(false);
     }
@@ -188,7 +198,8 @@ export default function AlertsContent() {
           { label: "🔴 Críticos",      value: stats.vermelho, color: "#dc2626", bg: "#fef2f2", border: "#fca5a5" },
           { label: "🟡 Atenção",       value: stats.amarelo,  color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
           { label: "🚨 Rupturas",      value: stats.ruptura,  color: "#7c3aed", bg: "#f5f3ff", border: "#c4b5fd" },
-        ].map(({ label, value, color, bg, border }) => (
+          { label: "📨 Enviados (30d)",   value: alertStats?.alertasUltimos30Dias ?? "—", color: "#0891b2", bg: "#f0f9ff", border: "#bae6fd", sub: "via Central de Alertas" },
+        ].map(({ label, value, color, bg, border, sub }) => (
           <div key={label} style={{
             padding: "1.25rem", borderRadius: "0.5rem", textAlign: "center",
             backgroundColor: bg, border: `1px solid ${border}`,
@@ -197,6 +208,7 @@ export default function AlertsContent() {
             <div style={{ fontSize: "0.75rem", color: "#374151", marginTop: "0.25rem", fontWeight: "500" }}>
               {label}
             </div>
+            {sub && <div style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: "0.125rem" }}>{sub}</div>}
           </div>
         ))}
       </div>

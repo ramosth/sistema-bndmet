@@ -86,6 +86,25 @@ export const authService = {
   changePassword: async (senhaAtual, novaSenha) => {
     const response = await api.put('/auth/alterar-senha', { senhaAtual, novaSenha, confirmarSenha: novaSenha });
     return response.data;
+  },
+
+  solicitarResetSenha: async (email) => {
+    const response = await api.post('/auth/solicitar-reset-senha', { email });
+    return response.data;
+  },
+ 
+  validarTokenReset: async (token) => {
+    const response = await api.get(`/auth/validar-token-reset/${token}`);
+    return response.data;
+  },
+ 
+  resetarSenha: async (token, novaSenha) => {
+    const response = await api.post('/auth/resetar-senha', {
+      token,
+      novaSenha,
+      confirmarSenha: novaSenha,
+    });
+    return response.data;
   }
 };
 

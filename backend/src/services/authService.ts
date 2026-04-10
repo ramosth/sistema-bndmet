@@ -160,14 +160,23 @@ export class AuthService {
         }
       });
 
-      // Enviar email (implementar serviço de email)
-      // await emailService.enviarResetSenha(usuario.email, token);
-      // return { message: 'Instruções enviadas por email' };
+      // Enviar email com o token de reset
+      const resultadoEmail = await EmailService.enviarResetSenha(
+        { email: usuario.email, nome: usuario.nome },
+        token,
+        expira
+      );
+
+      if (!resultadoEmail.sucesso) {
+        console.warn('⚠️ Token gerado mas e-mail de reset não enviado:', resultadoEmail.erro);
+      }
 
       return {
         token,
         expira,
-        message: 'Token de reset gerado com sucesso'
+        message: resultadoEmail.sucesso
+          ? 'Token de reset enviado por e-mail'
+          : 'Token gerado — verifique o console para o token (SMTP não configurado)'
       };
     } catch (error) {
       throw new Error('Erro ao solicitar reset de senha');

@@ -165,7 +165,7 @@ export default function SettingsContent() {
       setShowPasswordModal(false);
       resetPassword();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Erro ao alterar senha');
+      toast.error(error.response?.data?.error || 'Erro ao alterar senha');
     } finally { setLoading(false); }
   };
 

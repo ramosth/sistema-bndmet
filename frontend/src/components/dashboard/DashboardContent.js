@@ -212,8 +212,8 @@ export default function DashboardContent() {
           label="Umidade Média" sub="limiar crítico: 25%" />
         <StatCard icon={Shield}        iconColor="#dc2626"
           value={`${fmt(mediaRiscoPct)}%`}
-          valueColor={mediaRiscoPct > 80 ? '#dc2626' : mediaRiscoPct > 50 ? '#d97706' : '#16a34a'}
-          label="Risco Médio (FR)" sub="Verde ≤50% / Amar. ≤80%" />
+          valueColor={mediaRiscoPct > 75 ? '#dc2626' : mediaRiscoPct > 45 ? '#d97706' : '#16a34a'}
+          label="Risco Médio (FR)" sub="Verde ≤45% / Amar. ≤75%" />
         <StatCard icon={Cloud}         iconColor="#1d4ed8"
           value={`${fmt(sensorStats.mediaPrecipitacao)} mm`}
           label="Precip. Média 24h" sub="BNDMET D6594 I006" />

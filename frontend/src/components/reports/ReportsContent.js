@@ -434,7 +434,7 @@ export default function ReportsContent() {
   <tr><td>Amplificação ×1,20</td><td>${s.eventosAmplificado} eventos</td><td>F_lençol ≥ 0,70 E chuva futura ≥ 5mm simultaneamente</td></tr>
   <tr><td>Buzzer Ativo</td><td>${s.eventosBuzzer} eventos</td><td>Alarme sonoro — situação crítica ou ruptura detectada</td></tr>
   <tr><td>Modo Manual</td><td>${s.eventosModoManual} registros</td><td>Inseridos via curl/Postman (excluir de análises automáticas)</td></tr>
-  <tr><td>Risco Mínimo / Máximo</td><td>${fmt(s.risco?.min)}% / ${fmt(s.risco?.max)}%</td><td>Verde ≤50% | Amarelo 51–80% | Vermelho >80%</td></tr>
+  <tr><td>Risco Mínimo / Máximo</td><td>${fmt(s.risco?.min)}% / ${fmt(s.risco?.max)}%</td><td>Verde ≤45% | Amarelo 45–75% | Vermelho >75%</td></tr>
   <tr><td>Confiabilidade Mín. / Máx.</td><td>${fmt(s.confiabilidade?.min)}% / ${fmt(s.confiabilidade?.max)}%</td><td>Máximo operacional normal: 90% (BNDMET qualidade 76% + OWM OK)</td></tr>
 </table>
 
@@ -630,9 +630,9 @@ export default function ReportsContent() {
                       return [
                         // ativo é mutuamente exclusivo — apenas uma linha recebe ✓
                         // Ruptura tem precedência; depois é a faixa da média de risco
-                        { fr: '0,00 – 0,50', pct: '0 – 50%',  nivel: '🟢 Verde',    situacao: 'Condições normais de operação',             acao: 'Monitoramento de rotina. Sem intervenção necessária.',                            bg: '#f0fdf4', color: '#166534', ativo: !temRuptura && mediaRisco <= 50 },
-                        { fr: '0,51 – 0,80', pct: '51 – 80%', nivel: '🟡 Amarelo',  situacao: 'Atenção — monitoramento intensificado',       acao: 'Aumentar frequência de leituras. Verificar APIs e sensor físico.',                bg: '#fefce8', color: '#854d0e', ativo: !temRuptura && mediaRisco > 50 && mediaRisco <= 80 },
-                        { fr: '> 0,80',      pct: '> 80%',    nivel: '🔴 Vermelho', situacao: 'Alerta crítico — ação imediata requerida',    acao: 'Acionar protocolo de emergência. Notificar equipes. Avaliar evacuação.',         bg: '#fef2f2', color: '#991b1b', ativo: !temRuptura && mediaRisco > 80 },
+                        { fr: '0,00 – 0,45', pct: '0 – 45%',  nivel: '🟢 Verde',    situacao: 'Condições normais de operação',             acao: 'Monitoramento de rotina. Sem intervenção necessária.',                            bg: '#f0fdf4', color: '#166534', ativo: !temRuptura && mediaRisco <= 45 },
+                        { fr: '0,46 – 0,75', pct: '46 – 75%', nivel: '🟡 Amarelo',  situacao: 'Atenção — monitoramento intensificado',       acao: 'Aumentar frequência de leituras. Verificar APIs e sensor físico.',                bg: '#fefce8', color: '#854d0e', ativo: !temRuptura && mediaRisco > 45 && mediaRisco <= 75 },
+                        { fr: '> 0,75',      pct: '> 75%',    nivel: '🔴 Vermelho', situacao: 'Alerta crítico — ação imediata requerida',    acao: 'Acionar protocolo de emergência. Notificar equipes. Avaliar evacuação.',         bg: '#fef2f2', color: '#991b1b', ativo: !temRuptura && mediaRisco > 75 },
                         { fr: '1,00 (override)', pct: '100%', nivel: '🚨 Ruptura',  situacao: 'Umidade ≥ 30% — FR forçado por hardware',    acao: 'EVACUAÇÃO IMEDIATA. Buzzer ativo. acionarRuptura() sobrescreve a Equação 5.',   bg: '#f5f3ff', color: '#581c87', ativo: temRuptura },
                       ].map(({ fr, pct, nivel, situacao, acao, bg, color, ativo }) => (
                         <tr key={fr} style={{ backgroundColor: ativo ? bg : 'white', borderBottom: '1px solid var(--gray-200)' }}>
@@ -768,7 +768,7 @@ export default function ReportsContent() {
                 <StatRow label="Amplificação ×1,20" value={`${s.eventosAmplificado ?? 0} eventos`} tooltip="Mecanismo ativado quando duas condições ocorrem simultaneamente: F_lençol ≥ 0,70 (solo com saturação avançada, equivalente a umidade ≥ 17,5%) E acumulado previsto ≥ 5 mm/24h (intensidade Moderada ou superior). O fator de risco é multiplicado por 1,20 para refletir a condição qualitativamente mais grave que a soma linear dos componentes individuais." />
                 <StatRow label="Buzzer Ativo" value={`${s.eventosBuzzer ?? 0} eventos`} tooltip="Buzzer ativo no ESP8266 — acionado pelo Módulo 3 (Sistema de Alerta) quando o nível de alerta é Vermelho ou quando a função acionarRuptura() é chamada por umidade ≥ 30%." highlight={s.eventosBuzzer > 0 ? 'var(--red-600)' : 'var(--green-600)'} />
                 <StatRow label="Modo Manual" value={`${s.eventosModoManual ?? 0} registros`} tooltip="Registros com modoManual=true foram inseridos diretamente via curl ou Postman durante testes e desenvolvimento. Devem ser excluídos de análises automáticas de tendência pois não representam leituras reais do sensor em campo." />
-                <StatRow label="Risco mín. / máx." value={`${fmt(s.risco?.min)}% / ${fmt(s.risco?.max)}%`} tooltip="Fator de risco integrado (FR) calculado pela Equação 12. Limites: Verde 0–0,50 (0–50%) / Amarelo 0,51–0,80 (51–80%) / Vermelho >0,80 (>80%). Em caso de ruptura (umidade ≥ 30%) o firmware força FR=1,0 (100%) independente da equação." highlight={s.risco?.max > 80 ? 'var(--red-600)' : s.risco?.max > 50 ? 'var(--yellow-600)' : 'var(--green-600)'} />
+                <StatRow label="Risco mín. / máx." value={`${fmt(s.risco?.min)}% / ${fmt(s.risco?.max)}%`} tooltip="Fator de risco integrado (FR) calculado pela Equação 12. Limites: Verde 0–0,45 (0–45%) / Amarelo 0,46–0,75 (46–75%) / Vermelho >0,75 (>75%). Em caso de ruptura (umidade ≥ 30%) o firmware força FR=1,0 (100%) independente da equação." highlight={s.risco?.max > 75 ? 'var(--red-600)' : s.risco?.max > 45 ? 'var(--yellow-600)' : 'var(--green-600)'} />
                 <StatRow label="Confiabilidade mín. / máx." value={`${fmt(s.confiabilidade?.min)}% / ${fmt(s.confiabilidade?.max)}%`} tooltip="Confiabilidade mínima do período. O máximo operacional normal é 90%: base 100% menos −10% de qualidade BNDMET (D6594 opera com ~76%) menos ausência de outros descontos. Valores abaixo de 70% indicam múltiplas falhas simultâneas no mesmo ciclo de leitura." highlight={s.confiabilidade?.min < 60 ? 'var(--red-600)' : 'var(--gray-700)'} />
               </div>
             </div>
@@ -819,7 +819,7 @@ export default function ReportsContent() {
                       ['ADC', 'Valor bruto do ADC (0–1023). ADC=1024 → sensor desconectado'],
                       ['Fator Local', 'Fator_lençol normalizado [0–1] = min(umidade/25, 1)'],
                       ['Risco (%)', 'Índice de risco integrado da Equação 5 (0–100%)'],
-                      ['Nível', 'Verde ≤50% / Amarelo 51–80% / Vermelho >80%'],
+                      ['Nível', 'Verde ≤45% / Amarelo 46–75% / Vermelho >75%'],
                       ['Confiab. (%)', 'Confiabilidade da análise. Reduzida por falhas de sensor ou API'],
                       ['BNDMET', 'Status da API BNDMET nesta leitura'],
                       ['OWM', 'Status da API OpenWeatherMap nesta leitura'],
@@ -856,7 +856,7 @@ export default function ReportsContent() {
                         <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', fontWeight: '500', color: 'var(--terracotta)' }}>{fmt(parseFloat(d.umidadeSolo))}%</td>
                         <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', color: d.valorAdc === 1024 ? 'var(--red-500)' : 'var(--gray-600)', fontWeight: d.valorAdc === 1024 ? '700' : '400' }}>{d.valorAdc}</td>
                         <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', color: 'var(--gray-600)' }}>{fmt(parseFloat(d.fatorLocal))}</td>
-                        <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', fontWeight: '700', color: (d.indiceRisco||0) > 80 ? 'var(--red-600)' : (d.indiceRisco||0) > 50 ? 'var(--yellow-600)' : 'var(--green-600)' }}>
+                        <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', fontWeight: '700', color: (d.indiceRisco||0) > 75 ? 'var(--red-600)' : (d.indiceRisco||0) > 45 ? 'var(--yellow-600)' : 'var(--green-600)' }}>
                           {d.indiceRisco != null ? d.indiceRisco : fmt(parseFloat(d.riscoIntegrado||0)*100)}%
                         </td>
                         <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center' }}><NivelBadge nivel={d.nivelAlerta} /></td>
@@ -885,7 +885,7 @@ export default function ReportsContent() {
                         const descontoInfo = {
                           sensor_falha:        { label: 'Sensor físico com falha',        max: 40, desc: 'ADC=1024 — sensor desconectado ou saturado. Dado primário ausente.' },
                           bndmet_indisponivel: { label: 'BNDMET indisponível',             max: 25, desc: 'API BNDMET fora do ar. V_ch.24h, V_ch.hist e V_ch.30d sem dado real.' },
-                          qualidade_bndmet:    { label: 'Qualidade BNDMET < 80%',          max: 10, desc: 'Estação D6594 retornou dados com lacunas (qualidade 73% → desconto fixo neste sistema).' },
+                          qualidade_bndmet:    { label: 'Qualidade BNDMET < 80%',          max: 10, desc: 'Estação D6594 retornou dados com lacunas (valores nulos).' },
                           owm_indisponivel:    { label: 'OWM indisponível',                max: 15, desc: 'API OpenWeatherMap sem retorno. V_ch.futura e V_pressão sem dado.' },
                           wifi_desconectado:   { label: 'WiFi desconectado',               max: 10, desc: 'Cálculo ocorreu localmente no ESP8266 mas transmissão perdida.' },
                           buffer_insuficiente: { label: 'Buffer histórico insuficiente',   max: 10, desc: 'Menos de 5 leituras acumuladas. Taxa de variação e histórico de pressão imprecisos.' },
@@ -966,7 +966,7 @@ export default function ReportsContent() {
                                   </div>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', marginTop: '0.125rem', borderTop: '2px solid #bfdbfe' }}>
                                     <span style={{ fontWeight: '700', color: 'var(--gray-700)' }}>Total FR {isRuptura ? '(override)' : ''}</span>
-                                    <span style={{ fontWeight: '700', color: d.indiceRisco > 80 ? 'var(--red-600)' : d.indiceRisco > 50 ? 'var(--yellow-600)' : 'var(--green-600)' }}>
+                                    <span style={{ fontWeight: '700', color: d.indiceRisco > 75 ? 'var(--red-600)' : d.indiceRisco > 45 ? 'var(--yellow-600)' : 'var(--green-600)' }}>
                                       {d.indiceRisco != null ? d.indiceRisco : fmt(parseFloat(d.riscoIntegrado||0)*100)}%
                                       {d.amplificado ? ' (×1,20 ✓)' : ''}
                                     </span>
