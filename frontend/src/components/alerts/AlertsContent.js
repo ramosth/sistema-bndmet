@@ -21,6 +21,19 @@ import { usePagination } from "@/hooks";
 //  Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Mesma lógica do ReportsContent:
+// Ruptura       = VERMELHO + recomendacao contém 'RUPTURA'
+// Vermelho puro = VERMELHO + recomendacao contém 'CRÍTICO'
+const isRupturaAlert = (a) =>
+  a.nivelAlerta === 'VERMELHO' &&
+  typeof a.recomendacao === 'string' &&
+  a.recomendacao.includes('RUPTURA');
+
+const isVermelhoPuro = (a) =>
+  a.nivelAlerta === 'VERMELHO' &&
+  typeof a.recomendacao === 'string' &&
+  a.recomendacao.includes('CRÍTICO');
+
 const fmt = (v, decimals = 1) => {
   const x = parseFloat(v);
   if (isNaN(x) || v == null) return "—";
@@ -116,8 +129,8 @@ export default function AlertsContent() {
   useEffect(() => {
     const mapa = {
       amarelo:  (a) => a.nivelAlerta === "AMARELO",
-      vermelho: (a) => a.nivelAlerta === "VERMELHO",
-      ruptura:  (a) => a.indiceRisco === 100,
+      vermelho: (a) => isVermelhoPuro(a),
+      ruptura:  (a) => isRupturaAlert(a),
     };
     const result = filtroNivel === "todos" ? allAlerts : allAlerts.filter(mapa[filtroNivel] || (() => true));
     setFilteredAlerts(result);
@@ -156,9 +169,9 @@ export default function AlertsContent() {
   // ── Estatísticas ──────────────────────────────────────────────────────────
   const stats = {
     total:    allAlerts.length,
-    vermelho: allAlerts.filter(a => a.nivelAlerta === "VERMELHO").length,
+    vermelho: allAlerts.filter(a => isVermelhoPuro(a)).length,
     amarelo:  allAlerts.filter(a => a.nivelAlerta === "AMARELO").length,
-    ruptura:  allAlerts.filter(a => a.indiceRisco === 100).length,
+    ruptura:  allAlerts.filter(a => isRupturaAlert(a)).length,
   };
 
   const totalPages = Math.ceil(filteredAlerts.length / pagination.limit);
@@ -272,7 +285,7 @@ export default function AlertsContent() {
           <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
             {visibleAlerts.map((alert, index) => {
               const alertLevel = getAlertLevel(alert.nivelAlerta);
-              const isRuptura  = alert.indiceRisco === 100;
+              const isRuptura  = isRupturaAlert(alert);
               const isExpanded = expandedCard === index;
 
               // Componentes V_x

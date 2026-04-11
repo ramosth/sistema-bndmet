@@ -121,6 +121,21 @@ export default function SettingsContent() {
     return `${h}h ${m}m`;
   };
 
+  // Formatar tempo relativo da última leitura com precisão de segundos
+  // Usa o timestamp ISO retornado pelo backend em vez do minutosUltimaLeitura
+  // (que é Math.floor e retorna 0 para qualquer leitura < 60s)
+  const formatUltimaLeitura = (isoTimestamp) => {
+    if (!isoTimestamp) return null;
+    const diffMs  = Date.now() - new Date(isoTimestamp).getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60)   return `Última leitura: ${diffSec}s atrás`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60)   return `Última leitura: ${diffMin} min atrás`;
+    const diffH   = Math.floor(diffMin / 60);
+    const remMin  = diffMin % 60;
+    return `Última leitura: ${diffH}h ${remMin}m atrás`;
+  };
+
   // Formatar último login
   const formatLogin = (ts) => {
     if (!ts) return 'Nunca registrado';
@@ -342,9 +357,7 @@ export default function SettingsContent() {
                       healthData.services?.sensor?.status === 'degraded' ? '🟡 Degradado' :
                       healthData.services?.sensor?.status === 'offline'  ? '🔴 Offline' : '⚪ Sem dados'
                     }
-                    sub={healthData.services?.sensor?.minutosUltimaLeitura != null
-                      ? `Última leitura: ${healthData.services.sensor.minutosUltimaLeitura} min atrás`
-                      : null}
+                    sub={formatUltimaLeitura(healthData.services?.sensor?.ultimaLeitura)}
                     color={
                       healthData.services?.sensor?.status === 'active'   ? '#16a34a' :
                       healthData.services?.sensor?.status === 'degraded' ? '#d97706' : '#dc2626'

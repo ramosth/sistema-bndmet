@@ -202,7 +202,7 @@ export default function ReportsContent() {
   const calcStats = (data) => {
     if (!data.length) return {
       totalLeituras: 0,
-      alertasVerde: 0, alertasAmarelo: 0, alertasVermelho: 0,
+      alertasVerde: 0, alertasAmarelo: 0, alertasVermelho: 0, alertasRuptura: 0,
       eventosAmplificado: 0, eventosBuzzer: 0, eventosModoManual: 0,
       umidade: { min: 0, media: 0, max: 0 },
       risco: { min: 0, media: 0, max: 0 },
@@ -245,11 +245,31 @@ export default function ReportsContent() {
     const env   = data.map(d => d.dadosBrutos?.tentativasEnvio || 0);
     const upt   = data.map(d => d.dadosBrutos?.uptime || 0);
 
+    // ── Classificação Vermelho vs Ruptura ────────────────────────────────────
+    // Ambos chegam com nivelAlerta === 'VERMELHO' da API.
+    // A distinção está na recomendacao:
+    //   • Ruptura        → contém 'RUPTURA'  (🚨 RUPTURA ou 🟡 RETORNO DE RUPTURA)
+    //   • Vermelho puro  → contém 'CRÍTICO'  (🔴 CRÍTICO — Evacuar... [Simulação])
+    //   • Fallback       → qualquer outro VERMELHO vai para Ruptura por segurança
+    const isRupturaRec = (d) =>
+      d.nivelAlerta === 'VERMELHO' &&
+      typeof d.recomendacao === 'string' &&
+      d.recomendacao.includes('RUPTURA');
+
+    const isVermelhoPuro = (d) =>
+      d.nivelAlerta === 'VERMELHO' &&
+      typeof d.recomendacao === 'string' &&
+      d.recomendacao.includes('CRÍTICO');
+
+    const alertasRuptura            = data.filter(d => isRupturaRec(d)).length;
+    const alertasVermelhoSemRuptura = data.filter(d => isVermelhoPuro(d)).length;
+
     return {
       totalLeituras:      data.length,
       alertasVerde:       data.filter(d => d.nivelAlerta === 'VERDE').length,
       alertasAmarelo:     data.filter(d => d.nivelAlerta === 'AMARELO').length,
-      alertasVermelho:    data.filter(d => d.nivelAlerta === 'VERMELHO').length,
+      alertasVermelho:    alertasVermelhoSemRuptura,
+      alertasRuptura,
       eventosAmplificado: data.filter(d => d.amplificado === true).length,
       eventosBuzzer:      data.filter(d => d.buzzerAtivo === true).length,
       eventosModoManual:  data.filter(d => d.modoManual === true).length,
@@ -358,7 +378,7 @@ export default function ReportsContent() {
   .card .val{font-size:1.75rem;font-weight:700;color:#2563eb}
   .card .lbl{font-size:12px;color:#6b7280;margin-top:4px}
   .bar{display:flex;height:12px;border-radius:6px;overflow:hidden;margin:8px 0}
-  .bar-verde{background:#4ade80}.bar-amarelo{background:#facc15}.bar-vermelho{background:#ef4444}
+  .bar-verde{background:#4ade80}.bar-amarelo{background:#facc15}.bar-vermelho{background:#ef4444}.bar-ruptura{background:#7c3aed}
   table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}
   th{background:#f8f9fa;padding:8px 10px;text-align:left;border-bottom:2px solid #dee2e6;font-weight:600}
   td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
@@ -384,6 +404,7 @@ export default function ReportsContent() {
   <div class="card"><div class="val verde">${s.alertasVerde}</div><div class="lbl">🟢 Nível Verde</div></div>
   <div class="card"><div class="val amarelo">${s.alertasAmarelo}</div><div class="lbl">🟡 Nível Amarelo</div></div>
   <div class="card"><div class="val vermelho">${s.alertasVermelho}</div><div class="lbl">🔴 Nível Vermelho</div></div>
+  <div class="card"><div class="val">${s.alertasRuptura}</div><div class="lbl">🚨 Ruptura</div></div>
   <div class="card"><div class="val">${fmt(s.risco?.media)}%</div><div class="lbl">Risco Médio</div></div>
   <div class="card"><div class="val">${fmt(s.confiabilidade?.media)}%</div><div class="lbl">Confiabilidade Média</div></div>
   <div class="card"><div class="val">${s.eventosAmplificado}</div><div class="lbl">Eventos Amplif. ×1,20</div></div>
@@ -392,6 +413,7 @@ export default function ReportsContent() {
   <div class="bar-verde" style="flex:${s.alertasVerde}" title="Verde: ${s.alertasVerde}"></div>
   <div class="bar-amarelo" style="flex:${s.alertasAmarelo}" title="Amarelo: ${s.alertasAmarelo}"></div>
   <div class="bar-vermelho" style="flex:${s.alertasVermelho}" title="Vermelho: ${s.alertasVermelho}"></div>
+  <div class="bar-ruptura" style="flex:${s.alertasRuptura}" title="Ruptura: ${s.alertasRuptura}"></div>
 </div>
 
 <h2>2. Dados Meteorológicos e Pluviométricos</h2>
@@ -494,7 +516,21 @@ export default function ReportsContent() {
     );
   };
 
-  const NivelBadge = ({ nivel }) => {
+  // ── Helper: detecta ruptura numa leitura individual ────────────────────
+  const isRupturaRecord = (d) =>
+    d.nivelAlerta === 'VERMELHO' &&
+    typeof d.recomendacao === 'string' &&
+    d.recomendacao.includes('RUPTURA');
+
+  const NivelBadge = ({ nivel, dado }) => {
+    // Se a leitura é de ruptura, sobrepõe o badge com visual roxo próprio
+    if (dado && isRupturaRecord(dado)) {
+      return (
+        <span style={{ padding: '0.125rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem', fontWeight: '600', backgroundColor: '#ede9fe', color: '#581c87' }}>
+          🚨 Ruptura
+        </span>
+      );
+    }
     const map = {
       VERDE:    ['var(--green-100)',  'var(--green-700)',  '🟢 Normal'],
       AMARELO:  ['var(--yellow-100)', 'var(--yellow-700)', '🟡 Atenção'],
@@ -563,6 +599,7 @@ export default function ReportsContent() {
                 { label: '🟢 Nível Verde',        value: s.alertasVerde ?? 0,            color: 'var(--green-600)' },
                 { label: '🟡 Nível Amarelo',      value: s.alertasAmarelo ?? 0,          color: 'var(--yellow-600)' },
                 { label: '🔴 Nível Vermelho',     value: s.alertasVermelho ?? 0,         color: 'var(--red-600)' },
+                { label: '🚨 Ruptura',            value: s.alertasRuptura ?? 0,          color: '#581c87' },
                 { label: 'Risco Médio',           value: s.totalLeituras ? `${fmt(s.risco?.media)}%` : '0,00%', color: 'var(--red-500)' },
                 { label: 'Confiabilidade Média',  value: s.totalLeituras ? `${fmt(s.confiabilidade?.media)}%` : '0,00%', color: 'var(--green-600)' },
                 { label: 'Amplif. ×1,20',         value: s.eventosAmplificado ?? 0,      color: 'var(--orange-600)' },
@@ -577,31 +614,43 @@ export default function ReportsContent() {
             {s.totalLeituras > 0 && (
               <>
                 {(() => {
-                  const pV  = s.totalLeituras > 0 ? (s.alertasVerde   / s.totalLeituras * 100) : 0;
-                  const pA  = s.totalLeituras > 0 ? (s.alertasAmarelo / s.totalLeituras * 100) : 0;
-                  const pVm = s.totalLeituras > 0 ? (100 - pV - pA) : 0;
-                  // linear-gradient: abordagem mais robusta — um único elemento, sem depender de CSS vars
-                  const grad = `linear-gradient(to right, #4ade80 0% ${pV.toFixed(2)}%, #facc15 ${pV.toFixed(2)}% ${(pV+pA).toFixed(2)}%, #ef4444 ${(pV+pA).toFixed(2)}% 100%)`;
+                  const total = s.totalLeituras || 0;
+                  const nV  = s.alertasVerde    || 0;
+                  const nA  = s.alertasAmarelo  || 0;
+                  const nVm = s.alertasVermelho  || 0;
+                  const nR  = s.alertasRuptura   || 0;
+                  const pV  = total > 0 ? (nV  / total * 100) : 0;
+                  const pA  = total > 0 ? (nA  / total * 100) : 0;
+                  const pVm = total > 0 ? (nVm / total * 100) : 0;
+                  const pR  = total > 0 ? (nR  / total * 100) : 0;
+                  const p1  = pV.toFixed(2);
+                  const p2  = (pV + pA).toFixed(2);
+                  const p3  = (pV + pA + pVm).toFixed(2);
+                  // verde → amarelo → vermelho → roxo (ruptura)
+                  const grad = `linear-gradient(to right, #4ade80 0% ${p1}%, #facc15 ${p1}% ${p2}%, #ef4444 ${p2}% ${p3}%, #7c3aed ${p3}% 100%)`;
                   return (
                     <div style={{
                       height: '10px',
                       borderRadius: '6px',
                       width: '100%',
-                      background: grad,
+                      background: total > 0 ? grad : '#e5e7eb',
                       marginTop: '0.5rem'
                     }} />
                   );
                 })()}
-                <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.75rem', color: 'var(--gray-500)', marginTop: '0.375rem' }}>
+                <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.75rem', color: 'var(--gray-500)', marginTop: '0.375rem', flexWrap: 'wrap' }}>
                   {(() => {
-                    const pVerde    = s.alertasVerde    / s.totalLeituras * 100;
-                    const pAmarelo  = s.alertasAmarelo  / s.totalLeituras * 100;
-                    const pVermelho = s.totalLeituras > 0 ? (100 - parseFloat(pVerde.toFixed(2)) - parseFloat(pAmarelo.toFixed(2))) : 0;
+                    const total  = s.totalLeituras || 0;
+                    const pVerde    = total > 0 ? (s.alertasVerde    || 0) / total * 100 : 0;
+                    const pAmarelo  = total > 0 ? (s.alertasAmarelo  || 0) / total * 100 : 0;
+                    const pVermelho = total > 0 ? (s.alertasVermelho  || 0) / total * 100 : 0;
+                    const pRuptura  = total > 0 ? (s.alertasRuptura   || 0) / total * 100 : 0;
                     return (
                       <>
-                        <span>🟢 {pVerde.toFixed(2)}% Normal</span>
-                        <span>🟡 {pAmarelo.toFixed(2)}% Atenção</span>
-                        <span>🔴 {pVermelho.toFixed(2)}% Crítico</span>
+                        <span><span style={{ color: '#4ade80', marginRight: '0.25rem' }}>●</span>{pVerde.toFixed(2)}% Normal</span>
+                        <span><span style={{ color: '#facc15', marginRight: '0.25rem' }}>●</span>{pAmarelo.toFixed(2)}% Atenção</span>
+                        <span><span style={{ color: '#ef4444', marginRight: '0.25rem' }}>●</span>{pVermelho.toFixed(2)}% Crítico</span>
+                        <span><span style={{ color: '#7c3aed', marginRight: '0.25rem' }}>●</span>{pRuptura.toFixed(2)}% Ruptura</span>
                       </>
                     );
                   })()}
@@ -859,7 +908,7 @@ export default function ReportsContent() {
                         <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', fontWeight: '700', color: (d.indiceRisco||0) > 75 ? 'var(--red-600)' : (d.indiceRisco||0) > 45 ? 'var(--yellow-600)' : 'var(--green-600)' }}>
                           {d.indiceRisco != null ? d.indiceRisco : fmt(parseFloat(d.riscoIntegrado||0)*100)}%
                         </td>
-                        <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center' }}><NivelBadge nivel={d.nivelAlerta} /></td>
+                        <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center' }}><NivelBadge nivel={d.nivelAlerta} dado={d} /></td>
                         <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', fontWeight: '500', color: d.confiabilidade >= 90 ? 'var(--green-600)' : d.confiabilidade >= 70 ? 'var(--yellow-600)' : 'var(--red-600)' }}>
                           {d.confiabilidade != null ? `${d.confiabilidade}%` : '—'}
                         </td>
@@ -871,8 +920,7 @@ export default function ReportsContent() {
                       {/* Linha expandida */}
                       {expandedRow === i && (() => {
                         // ── helpers locais ──────────────────────────────────
-                        const isRuptura = d.dadosBrutos?.estado_especial === 'RUPTURA' ||
-                                          (d.nivelAlerta === 'VERMELHO' && d.indiceRisco === 100 && parseFloat(d.umidadeSolo) >= 30);
+                        const isRuptura = isRupturaRecord(d);
                         const det = d.dadosBrutos?.confiabilidade_detalhes || null;
 
                         // FR que a Eq.5 teria calculado (sem override)
