@@ -63,7 +63,7 @@ const Tooltip = ({ text }) => {
 //  Badge de status OK / Falha
 // ─────────────────────────────────────────────────────────────────────────────
 const StatusBadge = ({ value, trueLabel = 'OK', falseLabel = 'Falha' }) => {
-  const isOk  = value === true || value === 'OK';
+  const isOk = value === true || value === 'OK';
   const isNull = value == null || value === '';
   return (
     <span style={{
@@ -72,7 +72,7 @@ const StatusBadge = ({ value, trueLabel = 'OK', falseLabel = 'Falha' }) => {
       fontSize: '0.75rem',
       fontWeight: '600',
       backgroundColor: isNull ? 'var(--gray-100)' : isOk ? 'var(--green-100)' : 'var(--red-100)',
-      color:           isNull ? 'var(--gray-500)' : isOk ? 'var(--green-700)' : 'var(--red-700)'
+      color: isNull ? 'var(--gray-500)' : isOk ? 'var(--green-700)' : 'var(--red-700)'
     }}>
       {isNull ? '—' : isOk ? trueLabel : falseLabel}
     </span>
@@ -112,46 +112,46 @@ const StatsTable = ({ rows, decimals = 1 }) => {
     });
   };
   return (
-  <div style={{ overflowX: 'auto' }}>
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-      <thead>
-        <tr style={{ backgroundColor: 'var(--gray-50)' }}>
-          {['Parâmetro', 'Fonte', 'Mínimo', 'Média', 'Máximo', 'Unidade'].map(h => (
-            <th key={h} style={{
-              padding: '0.625rem 0.75rem',
-              textAlign: h === 'Parâmetro' || h === 'Fonte' ? 'left' : 'center',
-              borderBottom: '2px solid var(--gray-200)',
-              fontWeight: '600',
-              color: 'var(--gray-700)',
-              whiteSpace: 'nowrap'
-            }}>{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map(({ label, fonte, min, media, max, unit, tooltip }, i) => (
-          <tr key={i} style={{ borderBottom: '1px solid var(--gray-100)' }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--gray-50)'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-            <td style={{ padding: '0.625rem 0.75rem', fontWeight: '500', color: 'var(--gray-800)' }}>
-              <span style={{ display: 'flex', alignItems: 'center' }}>
-                {label}{tooltip && <Tooltip text={tooltip} />}
-              </span>
-            </td>
-            <td style={{ padding: '0.625rem 0.75rem' }}>
-              <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '0.25rem', backgroundColor: 'var(--gray-100)', color: 'var(--gray-600)' }}>
-                {fonte}
-              </span>
-            </td>
-            <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', color: 'var(--primary-blue)' }}>{fmtCell(min)}</td>
-            <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', fontWeight: '700', color: 'var(--gray-800)' }}>{fmtCell(media)}</td>
-            <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', color: 'var(--red-500)' }}>{fmtCell(max)}</td>
-            <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', color: 'var(--gray-500)', fontSize: '0.75rem' }}>{unit}</td>
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+        <thead>
+          <tr style={{ backgroundColor: 'var(--gray-50)' }}>
+            {['Parâmetro', 'Fonte', 'Mínimo', 'Média', 'Máximo', 'Unidade'].map(h => (
+              <th key={h} style={{
+                padding: '0.625rem 0.75rem',
+                textAlign: h === 'Parâmetro' || h === 'Fonte' ? 'left' : 'center',
+                borderBottom: '2px solid var(--gray-200)',
+                fontWeight: '600',
+                color: 'var(--gray-700)',
+                whiteSpace: 'nowrap'
+              }}>{h}</th>
+            ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          {rows.map(({ label, fonte, min, media, max, unit, tooltip }, i) => (
+            <tr key={i} style={{ borderBottom: '1px solid var(--gray-100)' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--gray-50)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+              <td style={{ padding: '0.625rem 0.75rem', fontWeight: '500', color: 'var(--gray-800)' }}>
+                <span style={{ display: 'flex', alignItems: 'center' }}>
+                  {label}{tooltip && <Tooltip text={tooltip} />}
+                </span>
+              </td>
+              <td style={{ padding: '0.625rem 0.75rem' }}>
+                <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '0.25rem', backgroundColor: 'var(--gray-100)', color: 'var(--gray-600)' }}>
+                  {fonte}
+                </span>
+              </td>
+              <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', color: 'var(--primary-blue)' }}>{fmtCell(min)}</td>
+              <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', fontWeight: '700', color: 'var(--gray-800)' }}>{fmtCell(media)}</td>
+              <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', color: 'var(--red-500)' }}>{fmtCell(max)}</td>
+              <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', color: 'var(--gray-500)', fontSize: '0.75rem' }}>{unit}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
 
@@ -159,10 +159,10 @@ const StatsTable = ({ rows, decimals = 1 }) => {
 //  Componente principal
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ReportsContent() {
-  const [reportData,   setReportData]   = useState(null);
-  const [loading,      setLoading]      = useState(false);
-  const [generating,   setGenerating]   = useState(false);
-  const [expandedRow,  setExpandedRow]  = useState(null);
+  const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [expandedRow, setExpandedRow] = useState(null);
   // Dropdown por seção — todas abertas por padrão
   const [openSections, setOpenSections] = useState({
     s1: true, s2: true, s3: true, s4: true, s5: true, s6: true
@@ -171,7 +171,7 @@ export default function ReportsContent() {
 
   const { filters, updateFilter } = useFilters({
     dataInicio: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    dataFim:    new Date().toISOString().split('T')[0]
+    dataFim: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => { generateReport(); }, []);
@@ -183,16 +183,29 @@ export default function ReportsContent() {
     }
     setLoading(true);
     try {
-      const res  = await sensorService.getReadingsByPeriod(
+      const res = await sensorService.getReadingsByPeriod(
         filters.dataInicio + 'T00:00:00',
-        filters.dataFim    + 'T23:59:59',
+        filters.dataFim + 'T23:59:59',
         1, 1000
       );
       const data = res.data || [];
       setReportData({ periodo: { inicio: filters.dataInicio, fim: filters.dataFim }, dados: data, stats: calcStats(data) });
+
+      // ── Diferencia período vazio de erro de comunicação ──────────────────
+      if (data.length === 0) {
+        toast('Nenhum dado encontrado para o período selecionado.', {
+          style: {
+            background: '#fefce8',
+            color: '#854d0e',
+            border: '1px solid #fde047',
+          },
+          duration: 5000,
+        });
+      }
+
     } catch (e) {
       console.error(e);
-      toast.error('Erro ao gerar relatório');
+      toast.error('Erro ao gerar relatório. Verifique se o servidor está acessível.');
     } finally {
       setLoading(false);
     }
@@ -232,7 +245,7 @@ export default function ReportsContent() {
       tentativasEnvio: { min: 0, media: 0, max: 0 },
       uptimeMax: 0,
     };
-    const n   = (v, fb = 0) => { const x = parseFloat(v); return isNaN(x) ? fb : x; };
+    const n = (v, fb = 0) => { const x = parseFloat(v); return isNaN(x) ? fb : x; };
     const mms = (arr) => {
       const c = arr.filter(v => !isNaN(v) && v != null);
       if (!c.length) return { min: 0, media: 0, max: 0 };
@@ -240,10 +253,10 @@ export default function ReportsContent() {
     };
 
     const risco = data.map(d => d.indiceRisco != null ? n(d.indiceRisco) : n(d.riscoIntegrado) * 100);
-    const heap  = data.map(d => d.dadosBrutos?.freeHeap).filter(Boolean);
-    const rssi  = data.map(d => d.dadosBrutos?.rssi).filter(v => v != null);
-    const env   = data.map(d => d.dadosBrutos?.tentativasEnvio || 0);
-    const upt   = data.map(d => d.dadosBrutos?.uptime || 0);
+    const heap = data.map(d => d.dadosBrutos?.freeHeap).filter(Boolean);
+    const rssi = data.map(d => d.dadosBrutos?.rssi).filter(v => v != null);
+    const env = data.map(d => d.dadosBrutos?.tentativasEnvio || 0);
+    const upt = data.map(d => d.dadosBrutos?.uptime || 0);
 
     // ── Classificação Vermelho vs Ruptura ────────────────────────────────────
     // Ambos chegam com nivelAlerta === 'VERMELHO' da API.
@@ -261,55 +274,55 @@ export default function ReportsContent() {
       typeof d.recomendacao === 'string' &&
       d.recomendacao.includes('CRÍTICO');
 
-    const alertasRuptura            = data.filter(d => isRupturaRec(d)).length;
+    const alertasRuptura = data.filter(d => isRupturaRec(d)).length;
     const alertasVermelhoSemRuptura = data.filter(d => isVermelhoPuro(d)).length;
 
     return {
-      totalLeituras:      data.length,
-      alertasVerde:       data.filter(d => d.nivelAlerta === 'VERDE').length,
-      alertasAmarelo:     data.filter(d => d.nivelAlerta === 'AMARELO').length,
-      alertasVermelho:    alertasVermelhoSemRuptura,
+      totalLeituras: data.length,
+      alertasVerde: data.filter(d => d.nivelAlerta === 'VERDE').length,
+      alertasAmarelo: data.filter(d => d.nivelAlerta === 'AMARELO').length,
+      alertasVermelho: alertasVermelhoSemRuptura,
       alertasRuptura,
       eventosAmplificado: data.filter(d => d.amplificado === true).length,
-      eventosBuzzer:      data.filter(d => d.buzzerAtivo === true).length,
-      eventosModoManual:  data.filter(d => d.modoManual === true).length,
+      eventosBuzzer: data.filter(d => d.buzzerAtivo === true).length,
+      eventosModoManual: data.filter(d => d.modoManual === true).length,
 
-      umidade:       mms(data.map(d => n(d.umidadeSolo))),
-      fatorLocal:    mms(data.map(d => n(d.fatorLocal))),
-      taxaVariacao:  mms(data.map(d => n(d.taxaVariacaoUmidade))),
-      risco:         mms(risco),
-      confiabilidade:mms(data.map(d => n(d.confiabilidade))),
+      umidade: mms(data.map(d => n(d.umidadeSolo))),
+      fatorLocal: mms(data.map(d => n(d.fatorLocal))),
+      taxaVariacao: mms(data.map(d => n(d.taxaVariacaoUmidade))),
+      risco: mms(risco),
+      confiabilidade: mms(data.map(d => n(d.confiabilidade))),
 
-      temperatura:      mms(data.map(d => n(d.temperatura))),
-      umidadeExterna:   mms(data.map(d => n(d.umidadeExterna))),
-      pressao:          mms(data.map(d => n(d.pressaoAtmosferica))),
-      vento:            mms(data.map(d => n(d.velocidadeVento))),
-      precip24h:        mms(data.map(d => n(d.precipitacao24h))),
-      precip7d:         mms(data.map(d => n(d.precipitacao7d))),
-      precip30d:        mms(data.map(d => n(d.precipitacao30d))),
-      precipAtual:      mms(data.map(d => n(d.precipitacaoAtual))),
-      chuvaAtualOwm:    mms(data.map(d => n(d.chuvaAtualOwm))),
-      chuvaFutura24h:   mms(data.map(d => n(d.chuvaFutura24h))),
+      temperatura: mms(data.map(d => n(d.temperatura))),
+      umidadeExterna: mms(data.map(d => n(d.umidadeExterna))),
+      pressao: mms(data.map(d => n(d.pressaoAtmosferica))),
+      vento: mms(data.map(d => n(d.velocidadeVento))),
+      precip24h: mms(data.map(d => n(d.precipitacao24h))),
+      precip7d: mms(data.map(d => n(d.precipitacao7d))),
+      precip30d: mms(data.map(d => n(d.precipitacao30d))),
+      precipAtual: mms(data.map(d => n(d.precipitacaoAtual))),
+      chuvaAtualOwm: mms(data.map(d => n(d.chuvaAtualOwm))),
+      chuvaFutura24h: mms(data.map(d => n(d.chuvaFutura24h))),
 
-      vLencol:      mms(data.map(d => n(d.vLencol))),
-      vChuvaAtual:  mms(data.map(d => n(d.vChuvaAtual))),
-      vChuvaHist:   mms(data.map(d => n(d.vChuvaHistorica))),
+      vLencol: mms(data.map(d => n(d.vLencol))),
+      vChuvaAtual: mms(data.map(d => n(d.vChuvaAtual))),
+      vChuvaHist: mms(data.map(d => n(d.vChuvaHistorica))),
       vChuvaMensal: mms(data.map(d => n(d.vChuvaMensal))),
       vChuvaFutura: mms(data.map(d => n(d.vChuvaFutura))),
-      vTaxaVar:     mms(data.map(d => n(d.vTaxaVariacao))),
-      vPressao:     mms(data.map(d => n(d.vPressao))),
+      vTaxaVar: mms(data.map(d => n(d.vTaxaVariacao))),
+      vPressao: mms(data.map(d => n(d.vPressao))),
 
-      sensorOkPct:  data.length ? Math.round(data.filter(d => d.sensorOk === true).length / data.length * 100) : 0,
-      bndmetOkPct:  data.length ? Math.round(data.filter(d => d.statusApiBndmet === 'OK').length / data.length * 100) : 0,
-      owmOkPct:     data.length ? Math.round(data.filter(d => d.statusApiOwm === 'OK').length / data.length * 100) : 0,
-      qualBndmet:   mms(data.map(d => n(d.qualidadeDadosBndmet))),
-      wifiOkPct:    data.length ? Math.round(data.filter(d => d.wifiConectado === true).length / data.length * 100) : 0,
-      estacao:      data.find(d => d.estacao)?.estacao || '—',
+      sensorOkPct: data.length ? Math.round(data.filter(d => d.sensorOk === true).length / data.length * 100) : 0,
+      bndmetOkPct: data.length ? Math.round(data.filter(d => d.statusApiBndmet === 'OK').length / data.length * 100) : 0,
+      owmOkPct: data.length ? Math.round(data.filter(d => d.statusApiOwm === 'OK').length / data.length * 100) : 0,
+      qualBndmet: mms(data.map(d => n(d.qualidadeDadosBndmet))),
+      wifiOkPct: data.length ? Math.round(data.filter(d => d.wifiConectado === true).length / data.length * 100) : 0,
+      estacao: data.find(d => d.estacao)?.estacao || '—',
 
-      freeHeap:        mms(heap),
-      rssi:            mms(rssi),
+      freeHeap: mms(heap),
+      rssi: mms(rssi),
       tentativasEnvio: mms(env),
-      uptimeMax:       upt.length ? Math.max(...upt) : 0,
+      uptimeMax: upt.length ? Math.max(...upt) : 0,
     };
   };
 
@@ -317,24 +330,24 @@ export default function ReportsContent() {
   const handleExportCSV = () => {
     if (!reportData?.dados?.length) { toast.error('Nenhum dado para exportar'); return; }
     const rows = [
-      ['Timestamp','ID','Umidade Solo (%)','ADC','Fator Local',
-       'Temp (°C)','Umid. Externa (%)','Pressão (hPa)','Vento (m/s)','Condições',
-       'Precip. 24h (mm)','Precip. 7d (mm)','Precip. 30d (mm)','Precip. Atual (mm)',
-       'Chuva Atual OWM (mm)','Chuva Futura 24h (mm)','Intensidade Previsão',
-       'Risco (%)','Índice Risco','Nível Alerta','Confiabilidade (%)',
-       'Amplificado','Taxa Variação Umidade',
-       'V_lencol','V_ch.24h','V_ch.hist','V_ch.30d','V_ch.futura','V_taxa','V_pressao',
-       'Status Sensor','Status BNDMET','Qualidade BNDMET (%)','Status OWM',
-       'WiFi','Buzzer','Modo','Estação',
-       'freeHeap (bytes)','RSSI (dBm)','Tentativas Envio','Recomendação'],
+      ['Timestamp', 'ID', 'Umidade Solo (%)', 'ADC', 'Fator Local',
+        'Temp (°C)', 'Umid. Externa (%)', 'Pressão (hPa)', 'Vento (m/s)', 'Condições',
+        'Precip. 24h (mm)', 'Precip. 7d (mm)', 'Precip. 30d (mm)', 'Precip. Atual (mm)',
+        'Chuva Atual OWM (mm)', 'Chuva Futura 24h (mm)', 'Intensidade Previsão',
+        'Risco (%)', 'Índice Risco', 'Nível Alerta', 'Confiabilidade (%)',
+        'Amplificado', 'Taxa Variação Umidade',
+        'V_lencol', 'V_ch.24h', 'V_ch.hist', 'V_ch.30d', 'V_ch.futura', 'V_taxa', 'V_pressao',
+        'Status Sensor', 'Status BNDMET', 'Qualidade BNDMET (%)', 'Status OWM',
+        'WiFi', 'Buzzer', 'Modo', 'Estação',
+        'freeHeap (bytes)', 'RSSI (dBm)', 'Tentativas Envio', 'Recomendação'],
       ...reportData.dados.map(d => [
         formatDateBRCSV(d.timestamp), d.id,
         d.umidadeSolo, d.valorAdc, d.fatorLocal,
         d.temperatura, d.umidadeExterna, d.pressaoAtmosferica, d.velocidadeVento,
-        `"${(d.descricaoTempo || '').replace(/"/g,'""')}"`,
+        `"${(d.descricaoTempo || '').replace(/"/g, '""')}"`,
         d.precipitacao24h, d.precipitacao7d, d.precipitacao30d, d.precipitacaoAtual,
         d.chuvaAtualOwm, d.chuvaFutura24h, d.intensidadePrevisao || '',
-        d.indiceRisco != null ? d.indiceRisco : (parseFloat(d.riscoIntegrado||0)*100).toFixed(1),
+        d.indiceRisco != null ? d.indiceRisco : (parseFloat(d.riscoIntegrado || 0) * 100).toFixed(1),
         d.indiceRisco, d.nivelAlerta, d.confiabilidade,
         d.amplificado ? 'Sim' : 'Não', d.taxaVariacaoUmidade,
         d.vLencol, d.vChuvaAtual, d.vChuvaHistorica, d.vChuvaMensal,
@@ -347,7 +360,7 @@ export default function ReportsContent() {
         d.estacao || '',
         d.dadosBrutos?.freeHeap || '', d.dadosBrutos?.rssi || '',
         d.dadosBrutos?.tentativasEnvio || '',
-        `"${(d.recomendacao || '').replace(/"/g,'""')}"`
+        `"${(d.recomendacao || '').replace(/"/g, '""')}"`
       ])
     ].map(r => r.join(',')).join('\n');
 
@@ -360,7 +373,7 @@ export default function ReportsContent() {
     setGenerating(true);
     try {
       if (!reportData) return;
-      const s   = reportData.stats;
+      const s = reportData.stats;
       const fmt = (n) => { const x = parseFloat(n || 0); return x.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
       const pct = (n) => `${n}%`;
 
@@ -464,10 +477,10 @@ export default function ReportsContent() {
 <div class="note">Dados do campo <code>dadosBrutos</code> de cada leitura. freeHeap &lt; 5.000 bytes pode causar reinicialização por watchdog.</div>
 <table>
   <tr><th>Métrica</th><th>Mínimo</th><th>Média</th><th>Máximo</th><th>Referência</th></tr>
-  <tr><td>Memória Livre (freeHeap)</td><td>${Math.round(s.freeHeap?.min||0).toLocaleString('pt-BR')}</td><td><b>${Math.round(s.freeHeap?.media||0).toLocaleString('pt-BR')}</b></td><td>${Math.round(s.freeHeap?.max||0).toLocaleString('pt-BR')}</td><td>bytes — mínimo seguro: 5.000</td></tr>
+  <tr><td>Memória Livre (freeHeap)</td><td>${Math.round(s.freeHeap?.min || 0).toLocaleString('pt-BR')}</td><td><b>${Math.round(s.freeHeap?.media || 0).toLocaleString('pt-BR')}</b></td><td>${Math.round(s.freeHeap?.max || 0).toLocaleString('pt-BR')}</td><td>bytes — mínimo seguro: 5.000</td></tr>
   <tr><td>Sinal WiFi (RSSI)</td><td>${fmt(s.rssi?.min)}</td><td><b>${fmt(s.rssi?.media)}</b></td><td>${fmt(s.rssi?.max)}</td><td>dBm — bom: acima de −70</td></tr>
   <tr><td>Tentativas de Envio</td><td>${fmt(s.tentativasEnvio?.min)}</td><td><b>${fmt(s.tentativasEnvio?.media)}</b></td><td>${fmt(s.tentativasEnvio?.max)}</td><td>0 = 1ª tentativa bem-sucedida</td></tr>
-  <tr><td>Uptime Máximo</td><td colspan="3"><b>${Math.round((s.uptimeMax||0)/60000)} min</b></td><td>Tempo desde último boot do ESP8266</td></tr>
+  <tr><td>Uptime Máximo</td><td colspan="3"><b>${Math.round((s.uptimeMax || 0) / 60000)} min</b></td><td>Tempo desde último boot do ESP8266</td></tr>
 </table>
 </body></html>`;
 
@@ -482,13 +495,13 @@ export default function ReportsContent() {
 
   // ── Helpers de render ────────────────────────────────────────────────────
   // fmt: 2 casas decimais como padrão global do relatório
-  const fmt  = (n) => { const x = parseFloat(n || 0); return x.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+  const fmt = (n) => { const x = parseFloat(n || 0); return x.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
   // fmtV: 3 casas decimais para componentes V_x (0,048 em vez de 0,0)
   const fmtV = (n) => {
     const x = parseFloat(n || 0);
     return x.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
   };
-  const s   = reportData?.stats;
+  const s = reportData?.stats;
 
   // ── Wrapper de seção colapsável ─────────────────────────────────────────
   const SectionCard = ({ sKey, title, className = 'mb-4', children }) => {
@@ -532,9 +545,9 @@ export default function ReportsContent() {
       );
     }
     const map = {
-      VERDE:    ['var(--green-100)',  'var(--green-700)',  '🟢 Normal'],
-      AMARELO:  ['var(--yellow-100)', 'var(--yellow-700)', '🟡 Atenção'],
-      VERMELHO: ['var(--red-100)',    'var(--red-700)',    '🔴 Crítico']
+      VERDE: ['var(--green-100)', 'var(--green-700)', '🟢 Normal'],
+      AMARELO: ['var(--yellow-100)', 'var(--yellow-700)', '🟡 Atenção'],
+      VERMELHO: ['var(--red-100)', 'var(--red-700)', '🔴 Crítico']
     };
     const [bg, color, label] = map[nivel] || ['var(--gray-100)', 'var(--gray-600)', nivel || '—'];
     return (
@@ -595,14 +608,14 @@ export default function ReportsContent() {
           <SectionCard sKey="s1" title="1. Resumo Executivo" className="mb-4">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
               {[
-                { label: 'Total de Leituras',    value: s.totalLeituras ?? 0,           color: 'var(--primary-blue)' },
-                { label: '🟢 Nível Verde',        value: s.alertasVerde ?? 0,            color: 'var(--green-600)' },
-                { label: '🟡 Nível Amarelo',      value: s.alertasAmarelo ?? 0,          color: 'var(--yellow-600)' },
-                { label: '🔴 Nível Vermelho',     value: s.alertasVermelho ?? 0,         color: 'var(--red-600)' },
-                { label: '🚨 Ruptura',            value: s.alertasRuptura ?? 0,          color: '#581c87' },
-                { label: 'Risco Médio',           value: s.totalLeituras ? `${fmt(s.risco?.media)}%` : '0,00%', color: 'var(--red-500)' },
-                { label: 'Confiabilidade Média',  value: s.totalLeituras ? `${fmt(s.confiabilidade?.media)}%` : '0,00%', color: 'var(--green-600)' },
-                { label: 'Amplif. ×1,20',         value: s.eventosAmplificado ?? 0,      color: 'var(--orange-600)' },
+                { label: 'Total de Leituras', value: s.totalLeituras ?? 0, color: 'var(--primary-blue)' },
+                { label: '🟢 Nível Verde', value: s.alertasVerde ?? 0, color: 'var(--green-600)' },
+                { label: '🟡 Nível Amarelo', value: s.alertasAmarelo ?? 0, color: 'var(--yellow-600)' },
+                { label: '🔴 Nível Vermelho', value: s.alertasVermelho ?? 0, color: 'var(--red-600)' },
+                { label: '🚨 Ruptura', value: s.alertasRuptura ?? 0, color: '#581c87' },
+                { label: 'Risco Médio', value: s.totalLeituras ? `${fmt(s.risco?.media)}%` : '0,00%', color: 'var(--red-500)' },
+                { label: 'Confiabilidade Média', value: s.totalLeituras ? `${fmt(s.confiabilidade?.media)}%` : '0,00%', color: 'var(--green-600)' },
+                { label: 'Amplif. ×1,20', value: s.eventosAmplificado ?? 0, color: 'var(--orange-600)' },
               ].map(({ label, value, color }) => (
                 <div key={label} style={{ padding: '1.25rem', backgroundColor: `${color}12`, borderRadius: '0.5rem', textAlign: 'center', border: `1px solid ${color}30` }}>
                   <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#374151' }}>{value}</div>
@@ -615,17 +628,17 @@ export default function ReportsContent() {
               <>
                 {(() => {
                   const total = s.totalLeituras || 0;
-                  const nV  = s.alertasVerde    || 0;
-                  const nA  = s.alertasAmarelo  || 0;
-                  const nVm = s.alertasVermelho  || 0;
-                  const nR  = s.alertasRuptura   || 0;
-                  const pV  = total > 0 ? (nV  / total * 100) : 0;
-                  const pA  = total > 0 ? (nA  / total * 100) : 0;
+                  const nV = s.alertasVerde || 0;
+                  const nA = s.alertasAmarelo || 0;
+                  const nVm = s.alertasVermelho || 0;
+                  const nR = s.alertasRuptura || 0;
+                  const pV = total > 0 ? (nV / total * 100) : 0;
+                  const pA = total > 0 ? (nA / total * 100) : 0;
                   const pVm = total > 0 ? (nVm / total * 100) : 0;
-                  const pR  = total > 0 ? (nR  / total * 100) : 0;
-                  const p1  = pV.toFixed(2);
-                  const p2  = (pV + pA).toFixed(2);
-                  const p3  = (pV + pA + pVm).toFixed(2);
+                  const pR = total > 0 ? (nR / total * 100) : 0;
+                  const p1 = pV.toFixed(2);
+                  const p2 = (pV + pA).toFixed(2);
+                  const p3 = (pV + pA + pVm).toFixed(2);
                   // verde → amarelo → vermelho → roxo (ruptura)
                   const grad = `linear-gradient(to right, #4ade80 0% ${p1}%, #facc15 ${p1}% ${p2}%, #ef4444 ${p2}% ${p3}%, #7c3aed ${p3}% 100%)`;
                   return (
@@ -640,11 +653,11 @@ export default function ReportsContent() {
                 })()}
                 <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.75rem', color: 'var(--gray-500)', marginTop: '0.375rem', flexWrap: 'wrap' }}>
                   {(() => {
-                    const total  = s.totalLeituras || 0;
-                    const pVerde    = total > 0 ? (s.alertasVerde    || 0) / total * 100 : 0;
-                    const pAmarelo  = total > 0 ? (s.alertasAmarelo  || 0) / total * 100 : 0;
-                    const pVermelho = total > 0 ? (s.alertasVermelho  || 0) / total * 100 : 0;
-                    const pRuptura  = total > 0 ? (s.alertasRuptura   || 0) / total * 100 : 0;
+                    const total = s.totalLeituras || 0;
+                    const pVerde = total > 0 ? (s.alertasVerde || 0) / total * 100 : 0;
+                    const pAmarelo = total > 0 ? (s.alertasAmarelo || 0) / total * 100 : 0;
+                    const pVermelho = total > 0 ? (s.alertasVermelho || 0) / total * 100 : 0;
+                    const pRuptura = total > 0 ? (s.alertasRuptura || 0) / total * 100 : 0;
                     return (
                       <>
                         <span><span style={{ color: '#4ade80', marginRight: '0.25rem' }}>●</span>{pVerde.toFixed(2)}% Normal</span>
@@ -679,10 +692,10 @@ export default function ReportsContent() {
                       return [
                         // ativo é mutuamente exclusivo — apenas uma linha recebe ✓
                         // Ruptura tem precedência; depois é a faixa da média de risco
-                        { fr: '0,00 – 0,45', pct: '0 – 45%',  nivel: '🟢 Verde',    situacao: 'Condições normais de operação',             acao: 'Monitoramento de rotina. Sem intervenção necessária.',                            bg: '#f0fdf4', color: '#166534', ativo: !temRuptura && mediaRisco <= 45 },
-                        { fr: '0,46 – 0,75', pct: '46 – 75%', nivel: '🟡 Amarelo',  situacao: 'Atenção — monitoramento intensificado',       acao: 'Aumentar frequência de leituras. Verificar APIs e sensor físico.',                bg: '#fefce8', color: '#854d0e', ativo: !temRuptura && mediaRisco > 45 && mediaRisco <= 75 },
-                        { fr: '> 0,75',      pct: '> 75%',    nivel: '🔴 Vermelho', situacao: 'Alerta crítico — ação imediata requerida',    acao: 'Acionar protocolo de emergência. Notificar equipes. Avaliar evacuação.',         bg: '#fef2f2', color: '#991b1b', ativo: !temRuptura && mediaRisco > 75 },
-                        { fr: '1,00 (override)', pct: '100%', nivel: '🚨 Ruptura',  situacao: 'Umidade ≥ 30% — FR forçado por hardware',    acao: 'EVACUAÇÃO IMEDIATA. Buzzer ativo. acionarRuptura() sobrescreve a Equação 5.',   bg: '#f5f3ff', color: '#581c87', ativo: temRuptura },
+                        { fr: '0,00 – 0,45', pct: '0 – 45%', nivel: '🟢 Verde', situacao: 'Condições normais de operação', acao: 'Monitoramento de rotina. Sem intervenção necessária.', bg: '#f0fdf4', color: '#166534', ativo: !temRuptura && mediaRisco <= 45 },
+                        { fr: '0,46 – 0,75', pct: '46 – 75%', nivel: '🟡 Amarelo', situacao: 'Atenção — monitoramento intensificado', acao: 'Aumentar frequência de leituras. Verificar APIs e sensor físico.', bg: '#fefce8', color: '#854d0e', ativo: !temRuptura && mediaRisco > 45 && mediaRisco <= 75 },
+                        { fr: '> 0,75', pct: '> 75%', nivel: '🔴 Vermelho', situacao: 'Alerta crítico — ação imediata requerida', acao: 'Acionar protocolo de emergência. Notificar equipes. Avaliar evacuação.', bg: '#fef2f2', color: '#991b1b', ativo: !temRuptura && mediaRisco > 75 },
+                        { fr: '1,00 (override)', pct: '100%', nivel: '🚨 Ruptura', situacao: 'Umidade ≥ 30% — FR forçado por hardware', acao: 'EVACUAÇÃO IMEDIATA. Buzzer ativo. acionarRuptura() sobrescreve a Equação 5.', bg: '#f5f3ff', color: '#581c87', ativo: temRuptura },
                       ].map(({ fr, pct, nivel, situacao, acao, bg, color, ativo }) => (
                         <tr key={fr} style={{ backgroundColor: ativo ? bg : 'white', borderBottom: '1px solid var(--gray-200)' }}>
                           <td style={{ padding: '0.5rem 0.75rem', textAlign: 'center', fontFamily: 'monospace', fontWeight: '600', color }}>{fr}</td>
@@ -748,11 +761,11 @@ export default function ReportsContent() {
                   </thead>
                   <tbody>
                     {[
-                      { label: 'Fraca',           range: '< 5 mm',          fator: '0,00', vx: '0,000', bg: '#f0fdf4', color: '#166534', dot: '🟢' },
-                      { label: 'Moderada',        range: '≥ 5 e < 25 mm',   fator: '0,25', vx: '0,038', bg: '#fefce8', color: '#854d0e', dot: '🟡' },
-                      { label: 'Forte',           range: '≥ 25 e < 50 mm',  fator: '0,50', vx: '0,075', bg: '#fff7ed', color: '#9a3412', dot: '🟠' },
-                      { label: 'Muito Forte',     range: '≥ 50 e < 80 mm',  fator: '0,75', vx: '0,113', bg: '#fef2f2', color: '#991b1b', dot: '🔴' },
-                      { label: 'Pancada de Chuva',range: '≥ 80 mm',         fator: '1,00', vx: '0,150', bg: '#f5f3ff', color: '#581c87', dot: '⛈️' },
+                      { label: 'Fraca', range: '< 5 mm', fator: '0,00', vx: '0,000', bg: '#f0fdf4', color: '#166534', dot: '🟢' },
+                      { label: 'Moderada', range: '≥ 5 e < 25 mm', fator: '0,25', vx: '0,038', bg: '#fefce8', color: '#854d0e', dot: '🟡' },
+                      { label: 'Forte', range: '≥ 25 e < 50 mm', fator: '0,50', vx: '0,075', bg: '#fff7ed', color: '#9a3412', dot: '🟠' },
+                      { label: 'Muito Forte', range: '≥ 50 e < 80 mm', fator: '0,75', vx: '0,113', bg: '#fef2f2', color: '#991b1b', dot: '🔴' },
+                      { label: 'Pancada de Chuva', range: '≥ 80 mm', fator: '1,00', vx: '0,150', bg: '#f5f3ff', color: '#581c87', dot: '⛈️' },
                     ].map(({ label, range, fator, vx, bg, color, dot }) => (
                       <tr key={label} style={{ backgroundColor: bg, borderBottom: '1px solid var(--gray-200)' }}>
                         <td style={{ padding: '0.5rem 0.75rem', fontWeight: '600', color }}>{label}</td>
@@ -786,13 +799,13 @@ export default function ReportsContent() {
               </span>
             </div>
             <StatsTable decimals={3} rows={[
-              { label: 'V_lençol',      fonte: 'ESP8266 ADC',     min: s.vLencol?.min,      media: s.vLencol?.media,      max: s.vLencol?.max,      unit: '[0–0,40]', tooltip: 'Peso 0,40. Representa o nível do lençol freático estimado via higrômetro. Equação 8: F_lençol = umidade / 25. Limiar máximo: 25% de umidade (F=1,0). Linha de ruptura: 30% (override imediato pelo firmware). V_lençol = F_lençol × 0,40 (Equação 9). Fonte: sensor capacitivo ESP8266, saída analógica A0.' },
-              { label: 'V_ch.24h',    fonte: 'BNDMET I006',     min: s.vChuvaAtual?.min,  media: s.vChuvaAtual?.media,  max: s.vChuvaAtual?.max,  unit: '[0–0,08]', tooltip: 'Peso 0,08. Precipitação acumulada nas últimas 24h normalizada pelo limiar de 50 mm. Equação 1: F_ch.24h = min(precip24h / 50, 1). O min() garante que o fator não ultrapasse 1 mesmo com chuvas acima do limiar. Fonte: BNDMET D6594, endpoint I006.' },
-              { label: 'V_ch.7d',fonte: 'BNDMET I006',     min: s.vChuvaHist?.min,   media: s.vChuvaHist?.media,   max: s.vChuvaHist?.max,   unit: '[0–0,12]', tooltip: 'Peso 0,12. Precipitação acumulada nos últimos 7 dias normalizada pelo limiar de 150 mm. Equação 3: F_ch.7d = min(precip7d / 150, 1). Captura o estado de saturação acumulada do solo por chuvas antecedentes. Fonte: BNDMET D6594, endpoint I006.' },
-              { label: 'V_ch.30d',   fonte: 'BNDMET I006',     min: s.vChuvaMensal?.min, media: s.vChuvaMensal?.media, max: s.vChuvaMensal?.max, unit: '[0–0,10]', tooltip: 'Peso 0,10. Precipitação acumulada nos últimos 30 dias normalizada pelo limiar de 300 mm. Equação 5: F_ch.30d = min(precip30d / 300, 1). Captura a saturação profunda do maciço por acúmulo prolongado que eleva o nível freático. Fonte: BNDMET D6594, endpoint I006.' },
-              { label: 'V_ch.futura',   fonte: 'OWM /forecast',   min: s.vChuvaFutura?.min, media: s.vChuvaFutura?.media, max: s.vChuvaFutura?.max, unit: '[0–0,15]', tooltip: 'Peso 0,15. Fator discreto baseado na Tabela 7 (AlertaRio, adaptado para D6594): Fraca=0,00 / Moderada=0,25 / Forte=0,50 / Muito Forte=0,75 / Pancada=1,00. Equação 7: V_ch.fut = F_ch.fut × 0,15. Fonte: OWM /forecast, soma dos 8 blocos de 3h (campo rain.3h).' },
-              { label: 'V_taxa',        fonte: 'ESP8266 buffer',  min: s.vTaxaVar?.min,     media: s.vTaxaVar?.media,     max: s.vTaxaVar?.max,     unit: '[0–0,10]', tooltip: 'Peso 0,10. Mede a velocidade de saturação do maciço. Equação 10: V_taxa = max(ΔU, 0) / 10 × 0,10, onde ΔU é a variação de umidade entre a leitura mais recente e a mais antiga no buffer circular de 10 leituras. Detecta saturação rápida mesmo com umidade absoluta baixa.' },
-              { label: 'V_pressão',     fonte: 'OWM grnd_level',  min: s.vPressao?.min,     media: s.vPressao?.media,     max: s.vPressao?.max,     unit: '[0–0,05]', tooltip: 'Peso 0,05. Indicador precursor de instabilidade atmosférica: quedas rápidas de pressão sinalizam aproximação de frentes frias ou sistemas de baixa pressão. Equação 11: V_pressão = max(ΔP, 0) / 5 × 0,05, onde ΔP é a queda em hPa no intervalo de 3h entre leituras. Limiar: 5 hPa/3h. Fonte: OWM /weather, campo grnd_level.' },
+              { label: 'V_lençol', fonte: 'ESP8266 ADC', min: s.vLencol?.min, media: s.vLencol?.media, max: s.vLencol?.max, unit: '[0–0,40]', tooltip: 'Peso 0,40. Representa o nível do lençol freático estimado via higrômetro. Equação 8: F_lençol = umidade / 25. Limiar máximo: 25% de umidade (F=1,0). Linha de ruptura: 30% (override imediato pelo firmware). V_lençol = F_lençol × 0,40 (Equação 9). Fonte: sensor capacitivo ESP8266, saída analógica A0.' },
+              { label: 'V_ch.24h', fonte: 'BNDMET I006', min: s.vChuvaAtual?.min, media: s.vChuvaAtual?.media, max: s.vChuvaAtual?.max, unit: '[0–0,08]', tooltip: 'Peso 0,08. Precipitação acumulada nas últimas 24h normalizada pelo limiar de 50 mm. Equação 1: F_ch.24h = min(precip24h / 50, 1). O min() garante que o fator não ultrapasse 1 mesmo com chuvas acima do limiar. Fonte: BNDMET D6594, endpoint I006.' },
+              { label: 'V_ch.7d', fonte: 'BNDMET I006', min: s.vChuvaHist?.min, media: s.vChuvaHist?.media, max: s.vChuvaHist?.max, unit: '[0–0,12]', tooltip: 'Peso 0,12. Precipitação acumulada nos últimos 7 dias normalizada pelo limiar de 150 mm. Equação 3: F_ch.7d = min(precip7d / 150, 1). Captura o estado de saturação acumulada do solo por chuvas antecedentes. Fonte: BNDMET D6594, endpoint I006.' },
+              { label: 'V_ch.30d', fonte: 'BNDMET I006', min: s.vChuvaMensal?.min, media: s.vChuvaMensal?.media, max: s.vChuvaMensal?.max, unit: '[0–0,10]', tooltip: 'Peso 0,10. Precipitação acumulada nos últimos 30 dias normalizada pelo limiar de 300 mm. Equação 5: F_ch.30d = min(precip30d / 300, 1). Captura a saturação profunda do maciço por acúmulo prolongado que eleva o nível freático. Fonte: BNDMET D6594, endpoint I006.' },
+              { label: 'V_ch.futura', fonte: 'OWM /forecast', min: s.vChuvaFutura?.min, media: s.vChuvaFutura?.media, max: s.vChuvaFutura?.max, unit: '[0–0,15]', tooltip: 'Peso 0,15. Fator discreto baseado na Tabela 7 (AlertaRio, adaptado para D6594): Fraca=0,00 / Moderada=0,25 / Forte=0,50 / Muito Forte=0,75 / Pancada=1,00. Equação 7: V_ch.fut = F_ch.fut × 0,15. Fonte: OWM /forecast, soma dos 8 blocos de 3h (campo rain.3h).' },
+              { label: 'V_taxa', fonte: 'ESP8266 buffer', min: s.vTaxaVar?.min, media: s.vTaxaVar?.media, max: s.vTaxaVar?.max, unit: '[0–0,10]', tooltip: 'Peso 0,10. Mede a velocidade de saturação do maciço. Equação 10: V_taxa = max(ΔU, 0) / 10 × 0,10, onde ΔU é a variação de umidade entre a leitura mais recente e a mais antiga no buffer circular de 10 leituras. Detecta saturação rápida mesmo com umidade absoluta baixa.' },
+              { label: 'V_pressão', fonte: 'OWM grnd_level', min: s.vPressao?.min, media: s.vPressao?.media, max: s.vPressao?.max, unit: '[0–0,05]', tooltip: 'Peso 0,05. Indicador precursor de instabilidade atmosférica: quedas rápidas de pressão sinalizam aproximação de frentes frias ou sistemas de baixa pressão. Equação 11: V_pressão = max(ΔP, 0) / 5 × 0,05, onde ΔP é a queda em hPa no intervalo de 3h entre leituras. Limiar: 5 hPa/3h. Fonte: OWM /weather, campo grnd_level.' },
             ]} />
           </SectionCard>
 
@@ -905,8 +918,8 @@ export default function ReportsContent() {
                         <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', fontWeight: '500', color: 'var(--terracotta)' }}>{fmt(parseFloat(d.umidadeSolo))}%</td>
                         <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', color: d.valorAdc === 1024 ? 'var(--red-500)' : 'var(--gray-600)', fontWeight: d.valorAdc === 1024 ? '700' : '400' }}>{d.valorAdc}</td>
                         <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', color: 'var(--gray-600)' }}>{fmt(parseFloat(d.fatorLocal))}</td>
-                        <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', fontWeight: '700', color: (d.indiceRisco||0) > 75 ? 'var(--red-600)' : (d.indiceRisco||0) > 45 ? 'var(--yellow-600)' : 'var(--green-600)' }}>
-                          {d.indiceRisco != null ? d.indiceRisco : fmt(parseFloat(d.riscoIntegrado||0)*100)}%
+                        <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', fontWeight: '700', color: (d.indiceRisco || 0) > 75 ? 'var(--red-600)' : (d.indiceRisco || 0) > 45 ? 'var(--yellow-600)' : 'var(--green-600)' }}>
+                          {d.indiceRisco != null ? d.indiceRisco : fmt(parseFloat(d.riscoIntegrado || 0) * 100)}%
                         </td>
                         <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center' }}><NivelBadge nivel={d.nivelAlerta} dado={d} /></td>
                         <td style={{ padding: '0.625rem 0.75rem', textAlign: 'center', fontWeight: '500', color: d.confiabilidade >= 90 ? 'var(--green-600)' : d.confiabilidade >= 70 ? 'var(--yellow-600)' : 'var(--red-600)' }}>
@@ -925,231 +938,232 @@ export default function ReportsContent() {
 
                         // FR que a Eq.5 teria calculado (sem override)
                         const frEq5 = [d.vLencol, d.vChuvaAtual, d.vChuvaHistorica,
-                                       d.vChuvaMensal, d.vChuvaFutura, d.vTaxaVariacao, d.vPressao]
+                        d.vChuvaMensal, d.vChuvaFutura, d.vTaxaVariacao, d.vPressao]
                           .reduce((acc, v) => acc + (parseFloat(v) || 0), 0);
                         const frEq5Pct = Math.round(frEq5 * 100);
 
                         // Mapa de descrições dos descontos
                         const descontoInfo = {
-                          sensor_falha:        { label: 'Sensor físico com falha',        max: 40, desc: 'ADC=1024 — sensor desconectado ou saturado. Dado primário ausente.' },
-                          bndmet_indisponivel: { label: 'BNDMET indisponível',             max: 25, desc: 'API BNDMET fora do ar. V_ch.24h, V_ch.hist e V_ch.30d sem dado real.' },
-                          qualidade_bndmet:    { label: 'Qualidade BNDMET < 80%',          max: 10, desc: 'Estação D6594 retornou dados com lacunas (valores nulos).' },
-                          owm_indisponivel:    { label: 'OWM indisponível',                max: 15, desc: 'API OpenWeatherMap sem retorno. V_ch.futura e V_pressão sem dado.' },
-                          wifi_desconectado:   { label: 'WiFi desconectado',               max: 10, desc: 'Cálculo ocorreu localmente no ESP8266 mas transmissão perdida.' },
-                          buffer_insuficiente: { label: 'Buffer histórico insuficiente',   max: 10, desc: 'Menos de 5 leituras acumuladas. Taxa de variação e histórico de pressão imprecisos.' },
+                          sensor_falha: { label: 'Sensor físico com falha', max: 40, desc: 'ADC=1024 — sensor desconectado ou saturado. Dado primário ausente.' },
+                          bndmet_indisponivel: { label: 'BNDMET indisponível', max: 25, desc: 'API BNDMET fora do ar. V_ch.24h, V_ch.hist e V_ch.30d sem dado real.' },
+                          qualidade_bndmet: { label: 'Qualidade BNDMET < 80%', max: 10, desc: 'Estação D6594 retornou dados com lacunas (valores nulos).' },
+                          owm_indisponivel: { label: 'OWM indisponível', max: 15, desc: 'API OpenWeatherMap sem retorno. V_ch.futura e V_pressão sem dado.' },
+                          wifi_desconectado: { label: 'WiFi desconectado', max: 10, desc: 'Cálculo ocorreu localmente no ESP8266 mas transmissão perdida.' },
+                          buffer_insuficiente: { label: 'Buffer histórico insuficiente', max: 10, desc: 'Menos de 5 leituras acumuladas. Taxa de variação e histórico de pressão imprecisos.' },
                         };
 
                         return (
-                        <tr key={`exp-${i}`} style={{ backgroundColor: '#eff6ff', borderBottom: '2px solid #bfdbfe' }}>
-                          <td colSpan={10} style={{ padding: '1rem 1.25rem' }}>
+                          <tr key={`exp-${i}`} style={{ backgroundColor: '#eff6ff', borderBottom: '2px solid #bfdbfe' }}>
+                            <td colSpan={10} style={{ padding: '1rem 1.25rem' }}>
 
-                            {/* ── Banner de Ruptura ──────────────────────── */}
-                            {isRuptura && (
-                              <div style={{
-                                marginBottom: '1rem',
-                                padding: '0.875rem 1rem',
-                                backgroundColor: '#fef2f2',
-                                border: '2px solid #fca5a5',
-                                borderLeft: '6px solid #dc2626',
-                                borderRadius: '0.5rem',
-                              }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                  <span style={{ fontSize: '1rem' }}>🚨</span>
-                                  <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Override de Ruptura Ativado
-                                  </span>
-                                  <span style={{ marginLeft: 'auto', padding: '0.125rem 0.625rem', backgroundColor: '#dc2626', color: 'white', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700' }}>
-                                    FR = 100%
-                                  </span>
-                                </div>
-                                <p style={{ fontSize: '0.8rem', color: '#7f1d1d', margin: '0 0 0.625rem 0', lineHeight: 1.5 }}>
-                                  Umidade do solo <strong>{d.umidadeSolo}%</strong> atingiu ou superou o limiar crítico de <strong>30%</strong> (UMIDADE_RUPTURA).
-                                  A função <code style={{ backgroundColor: '#fee2e2', padding: '0 4px', borderRadius: '3px', fontSize: '0.7rem' }}>acionarRuptura()</code> sobrescreveu
-                                  o resultado da Equação 5 diretamente, forçando FR = 1,0 (100%).
-                                </p>
-                                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                                  <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #fca5a5', fontSize: '0.75rem' }}>
-                                    <div style={{ color: '#6b7280', marginBottom: '0.125rem' }}>FR pela Equação 5 (sem override)</div>
-                                    <div style={{ fontWeight: '700', color: '#d97706', fontSize: '0.875rem' }}>{frEq5Pct}% ({frEq5.toFixed(4)})</div>
-                                    <div style={{ color: '#9ca3af', fontSize: '0.7rem', marginTop: '0.125rem' }}>⚠️ Este valor foi descartado</div>
-                                  </div>
-                                  <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #fca5a5', fontSize: '0.75rem' }}>
-                                    <div style={{ color: '#6b7280', marginBottom: '0.125rem' }}>FR final gravado</div>
-                                    <div style={{ fontWeight: '700', color: '#dc2626', fontSize: '0.875rem' }}>100% (1,0000)</div>
-                                    <div style={{ color: '#9ca3af', fontSize: '0.7rem', marginTop: '0.125rem' }}>✅ Override por hardware</div>
-                                  </div>
-                                  <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #fca5a5', fontSize: '0.75rem' }}>
-                                    <div style={{ color: '#6b7280', marginBottom: '0.125rem' }}>Confiabilidade</div>
-                                    <div style={{ fontWeight: '700', color: '#16a34a', fontSize: '0.875rem' }}>100%</div>
-                                    <div style={{ color: '#9ca3af', fontSize: '0.7rem', marginTop: '0.125rem' }}>✅ Estado confirmado por hardware</div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
-
-                              {/* ── Componentes V_x ──────────────────────── */}
-                              <div>
-                                <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary-blue)', margin: '0 0 0.5rem 0' }}>⚙️ Componentes Equação 5</p>
-                                <div style={{ fontSize: '0.75rem' }}>
-                                  {[
-                                    ['V_lençol (×0,40)', d.vLencol],
-                                    ['V_ch.24h (×0,08)', d.vChuvaAtual],
-                                    ['V_ch.7d (×0,12)', d.vChuvaHistorica],
-                                    ['V_ch.30d (×0,10)', d.vChuvaMensal],
-                                    ['V_ch.futura (×0,15)', d.vChuvaFutura],
-                                    ['V_taxa (×0,10)', d.vTaxaVariacao],
-                                    ['V_pressão (×0,05)', d.vPressao],
-                                  ].map(([lbl, val]) => (
-                                    <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid #dbeafe' }}>
-                                      <span style={{ color: 'var(--gray-600)' }}>{lbl}</span>
-                                      <span style={{ fontWeight: '700', color: 'var(--primary-blue)' }}>{fmtV(val)}</span>
-                                    </div>
-                                  ))}
-                                  {/* Soma da Eq.5 */}
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', marginTop: '0.125rem', borderTop: '1px dashed #93c5fd' }}>
-                                    <span style={{ color: 'var(--gray-500)', fontSize: '0.7rem' }}>Σ Eq.5 (sem override)</span>
-                                    <span style={{ color: '#d97706', fontWeight: '600', fontSize: '0.7rem' }}>{frEq5Pct}%</span>
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', marginTop: '0.125rem', borderTop: '2px solid #bfdbfe' }}>
-                                    <span style={{ fontWeight: '700', color: 'var(--gray-700)' }}>Total FR {isRuptura ? '(override)' : ''}</span>
-                                    <span style={{ fontWeight: '700', color: d.indiceRisco > 75 ? 'var(--red-600)' : d.indiceRisco > 45 ? 'var(--yellow-600)' : 'var(--green-600)' }}>
-                                      {d.indiceRisco != null ? d.indiceRisco : fmt(parseFloat(d.riscoIntegrado||0)*100)}%
-                                      {d.amplificado ? ' (×1,20 ✓)' : ''}
+                              {/* ── Banner de Ruptura ──────────────────────── */}
+                              {isRuptura && (
+                                <div style={{
+                                  marginBottom: '1rem',
+                                  padding: '0.875rem 1rem',
+                                  backgroundColor: '#fef2f2',
+                                  border: '2px solid #fca5a5',
+                                  borderLeft: '6px solid #dc2626',
+                                  borderRadius: '0.5rem',
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                    <span style={{ fontSize: '1rem' }}>🚨</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                      Override de Ruptura Ativado
+                                    </span>
+                                    <span style={{ marginLeft: 'auto', padding: '0.125rem 0.625rem', backgroundColor: '#dc2626', color: 'white', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '700' }}>
+                                      FR = 100%
                                     </span>
                                   </div>
-                                </div>
-                              </div>
-
-                              {/* ── Contexto meteorológico ────────────────── */}
-                              <div>
-                                <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary-blue)', margin: '0 0 0.5rem 0' }}>🌧 Contexto Meteorológico</p>
-                                <div style={{ fontSize: '0.75rem' }}>
-                                  {[
-                                    ['Precip. 24h', `${d.precipitacao24h} mm`],
-                                    ['Precip. 7d', `${d.precipitacao7d} mm`],
-                                    ['Precip. 30d', `${d.precipitacao30d} mm`],
-                                    ['Precip. atual (I175)', `${d.precipitacaoAtual} mm`],
-                                    ['Chuva futura 24h', `${d.chuvaFutura24h} mm (${d.intensidadePrevisao || '—'})`],
-                                    ['Taxa var. umidade', String(d.taxaVariacaoUmidade)],
-                                    ['Descrição tempo', d.descricaoTempo || '—'],
-                                  ].map(([k, v]) => (
-                                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid #dbeafe' }}>
-                                      <span style={{ color: 'var(--gray-600)' }}>{k}</span>
-                                      <span style={{ fontWeight: '500' }}>{v}</span>
+                                  <p style={{ fontSize: '0.8rem', color: '#7f1d1d', margin: '0 0 0.625rem 0', lineHeight: 1.5 }}>
+                                    Umidade do solo <strong>{d.umidadeSolo}%</strong> atingiu ou superou o limiar crítico de <strong>30%</strong> (UMIDADE_RUPTURA).
+                                    A função <code style={{ backgroundColor: '#fee2e2', padding: '0 4px', borderRadius: '3px', fontSize: '0.7rem' }}>acionarRuptura()</code> sobrescreveu
+                                    o resultado da Equação 5 diretamente, forçando FR = 1,0 (100%).
+                                  </p>
+                                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                                    <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #fca5a5', fontSize: '0.75rem' }}>
+                                      <div style={{ color: '#6b7280', marginBottom: '0.125rem' }}>FR pela Equação 5 (sem override)</div>
+                                      <div style={{ fontWeight: '700', color: '#d97706', fontSize: '0.875rem' }}>{frEq5Pct}% ({frEq5.toFixed(4)})</div>
+                                      <div style={{ color: '#9ca3af', fontSize: '0.7rem', marginTop: '0.125rem' }}>⚠️ Este valor foi descartado</div>
                                     </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* ── Hardware e Status ─────────────────────── */}
-                              <div>
-                                <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary-blue)', margin: '0 0 0.5rem 0' }}>🔧 Hardware e Status</p>
-                                <div style={{ fontSize: '0.75rem' }}>
-                                  {[
-                                    ['freeHeap', `${(d.dadosBrutos?.freeHeap||0).toLocaleString('pt-BR')} bytes`],
-                                    ['RSSI', `${d.dadosBrutos?.rssi || '—'} dBm`],
-                                    ['Uptime', `${Math.round((d.dadosBrutos?.uptime||0)/1000)}s`],
-                                    ['Tentativas envio', String(d.dadosBrutos?.tentativasEnvio || 0)],
-                                    ['Amplificado', d.amplificado ? '✅ Sim (×1,20)' : 'Não'],
-                                    ['Modo', d.modoManual ? '⚠️ Manual' : '🤖 Automático'],
-                                    ['Buzzer', d.buzzerAtivo ? '🔊 Ativo' : 'Inativo'],
-                                  ].map(([k, v]) => (
-                                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid #dbeafe' }}>
-                                      <span style={{ color: 'var(--gray-600)' }}>{k}</span>
-                                      <span style={{ fontWeight: '500' }}>{v}</span>
+                                    <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #fca5a5', fontSize: '0.75rem' }}>
+                                      <div style={{ color: '#6b7280', marginBottom: '0.125rem' }}>FR final gravado</div>
+                                      <div style={{ fontWeight: '700', color: '#dc2626', fontSize: '0.875rem' }}>100% (1,0000)</div>
+                                      <div style={{ color: '#9ca3af', fontSize: '0.7rem', marginTop: '0.125rem' }}>✅ Override por hardware</div>
                                     </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* ── Tabela de Confiabilidade ──────────────── */}
-                              <div style={{ gridColumn: '1 / -1' }}>
-                                <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary-blue)', margin: '0 0 0.5rem 0' }}>
-                                  📊 Cálculo de Confiabilidade
-                                </p>
-                                {isRuptura ? (
-                                  <div style={{ padding: '0.625rem 0.875rem', backgroundColor: '#f0fdf4', borderRadius: '0.375rem', border: '1px solid #bbf7d0', fontSize: '0.8rem', color: '#166534' }}>
-                                    <strong>100% — Estado Especial: RUPTURA</strong><br />
-                                    <span style={{ color: '#4b5563', fontSize: '0.75rem' }}>
-                                      Durante a ruptura, o sensor físico confirma o estado diretamente por hardware.
-                                      Todos os descontos normais são ignorados — a confiabilidade é forçada para 100%
-                                      pois não há ambiguidade: o dado é real e o estado é crítico.
-                                    </span>
+                                    <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #fca5a5', fontSize: '0.75rem' }}>
+                                      <div style={{ color: '#6b7280', marginBottom: '0.125rem' }}>Confiabilidade</div>
+                                      <div style={{ fontWeight: '700', color: '#16a34a', fontSize: '0.875rem' }}>100%</div>
+                                      <div style={{ color: '#9ca3af', fontSize: '0.7rem', marginTop: '0.125rem' }}>✅ Estado confirmado por hardware</div>
+                                    </div>
                                   </div>
-                                ) : det ? (
-                                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
-                                    <thead>
-                                      <tr style={{ backgroundColor: '#dbeafe' }}>
-                                        <th style={{ padding: '0.375rem 0.625rem', textAlign: 'left', fontWeight: '600', color: '#1e40af' }}>Critério</th>
-                                        <th style={{ padding: '0.375rem 0.625rem', textAlign: 'center', fontWeight: '600', color: '#1e40af' }}>Desconto máx.</th>
-                                        <th style={{ padding: '0.375rem 0.625rem', textAlign: 'center', fontWeight: '600', color: '#1e40af' }}>Aplicado</th>
-                                        <th style={{ padding: '0.375rem 0.625rem', textAlign: 'left', fontWeight: '600', color: '#1e40af' }}>Descrição</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {Object.entries(det.descontos || {}).map(([chave, valor]) => {
-                                        const info = descontoInfo[chave] || { label: chave, max: '?', desc: '' };
-                                        const aplicado = valor > 0;
-                                        return (
-                                          <tr key={chave} style={{ borderBottom: '1px solid #bfdbfe', backgroundColor: aplicado ? '#fef9c3' : 'white' }}>
-                                            <td style={{ padding: '0.375rem 0.625rem', fontWeight: aplicado ? '600' : '400', color: aplicado ? '#92400e' : '#4b5563' }}>
-                                              {info.label}
-                                            </td>
-                                            <td style={{ padding: '0.375rem 0.625rem', textAlign: 'center', color: '#6b7280' }}>
-                                              −{info.max}%
-                                            </td>
-                                            <td style={{ padding: '0.375rem 0.625rem', textAlign: 'center', fontWeight: '700', color: aplicado ? '#dc2626' : '#16a34a' }}>
-                                              {aplicado ? `−${valor}%` : '0%'}
-                                            </td>
-                                            <td style={{ padding: '0.375rem 0.625rem', color: '#6b7280', fontStyle: aplicado ? 'normal' : 'italic' }}>
-                                              {info.desc}
-                                            </td>
-                                          </tr>
-                                        );
-                                      })}
-                                      {/* Linha de total */}
-                                      <tr style={{ backgroundColor: '#eff6ff', borderTop: '2px solid #93c5fd' }}>
-                                        <td style={{ padding: '0.375rem 0.625rem', fontWeight: '700', color: '#1e40af' }}>
-                                          Base (100%) − Total descontos
-                                        </td>
-                                        <td style={{ padding: '0.375rem 0.625rem', textAlign: 'center', color: '#6b7280' }}>—</td>
-                                        <td style={{ padding: '0.375rem 0.625rem', textAlign: 'center', fontWeight: '700', color: '#dc2626' }}>
-                                          −{det.total_desconto || 0}%
-                                        </td>
-                                        <td style={{ padding: '0.375rem 0.625rem' }}>
-                                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <span style={{ color: '#6b7280' }}>Resultado final:</span>
-                                            <span style={{ fontWeight: '700', fontSize: '0.875rem',
-                                              color: det.resultado >= 90 ? '#16a34a' : det.resultado >= 70 ? '#d97706' : '#dc2626'
-                                            }}>
-                                              {det.resultado}%
+                                </div>
+                              )}
+
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+
+                                {/* ── Componentes V_x ──────────────────────── */}
+                                <div>
+                                  <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary-blue)', margin: '0 0 0.5rem 0' }}>⚙️ Componentes Equação 5</p>
+                                  <div style={{ fontSize: '0.75rem' }}>
+                                    {[
+                                      ['V_lençol (×0,40)', d.vLencol],
+                                      ['V_ch.24h (×0,08)', d.vChuvaAtual],
+                                      ['V_ch.7d (×0,12)', d.vChuvaHistorica],
+                                      ['V_ch.30d (×0,10)', d.vChuvaMensal],
+                                      ['V_ch.futura (×0,15)', d.vChuvaFutura],
+                                      ['V_taxa (×0,10)', d.vTaxaVariacao],
+                                      ['V_pressão (×0,05)', d.vPressao],
+                                    ].map(([lbl, val]) => (
+                                      <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid #dbeafe' }}>
+                                        <span style={{ color: 'var(--gray-600)' }}>{lbl}</span>
+                                        <span style={{ fontWeight: '700', color: 'var(--primary-blue)' }}>{fmtV(val)}</span>
+                                      </div>
+                                    ))}
+                                    {/* Soma da Eq.5 */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', marginTop: '0.125rem', borderTop: '1px dashed #93c5fd' }}>
+                                      <span style={{ color: 'var(--gray-500)', fontSize: '0.7rem' }}>Σ Eq.5 (sem override)</span>
+                                      <span style={{ color: '#d97706', fontWeight: '600', fontSize: '0.7rem' }}>{frEq5Pct}%</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', marginTop: '0.125rem', borderTop: '2px solid #bfdbfe' }}>
+                                      <span style={{ fontWeight: '700', color: 'var(--gray-700)' }}>Total FR {isRuptura ? '(override)' : ''}</span>
+                                      <span style={{ fontWeight: '700', color: d.indiceRisco > 75 ? 'var(--red-600)' : d.indiceRisco > 45 ? 'var(--yellow-600)' : 'var(--green-600)' }}>
+                                        {d.indiceRisco != null ? d.indiceRisco : fmt(parseFloat(d.riscoIntegrado || 0) * 100)}%
+                                        {d.amplificado ? ' (×1,20 ✓)' : ''}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* ── Contexto meteorológico ────────────────── */}
+                                <div>
+                                  <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary-blue)', margin: '0 0 0.5rem 0' }}>🌧 Contexto Meteorológico</p>
+                                  <div style={{ fontSize: '0.75rem' }}>
+                                    {[
+                                      ['Precip. 24h', `${d.precipitacao24h} mm`],
+                                      ['Precip. 7d', `${d.precipitacao7d} mm`],
+                                      ['Precip. 30d', `${d.precipitacao30d} mm`],
+                                      ['Precip. atual (I175)', `${d.precipitacaoAtual} mm`],
+                                      ['Chuva futura 24h', `${d.chuvaFutura24h} mm (${d.intensidadePrevisao || '—'})`],
+                                      ['Taxa var. umidade', String(d.taxaVariacaoUmidade)],
+                                      ['Descrição tempo', d.descricaoTempo || '—'],
+                                    ].map(([k, v]) => (
+                                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid #dbeafe' }}>
+                                        <span style={{ color: 'var(--gray-600)' }}>{k}</span>
+                                        <span style={{ fontWeight: '500' }}>{v}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* ── Hardware e Status ─────────────────────── */}
+                                <div>
+                                  <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary-blue)', margin: '0 0 0.5rem 0' }}>🔧 Hardware e Status</p>
+                                  <div style={{ fontSize: '0.75rem' }}>
+                                    {[
+                                      ['freeHeap', `${(d.dadosBrutos?.freeHeap || 0).toLocaleString('pt-BR')} bytes`],
+                                      ['RSSI', `${d.dadosBrutos?.rssi || '—'} dBm`],
+                                      ['Uptime', `${Math.round((d.dadosBrutos?.uptime || 0) / 1000)}s`],
+                                      ['Tentativas envio', String(d.dadosBrutos?.tentativasEnvio || 0)],
+                                      ['Amplificado', d.amplificado ? '✅ Sim (×1,20)' : 'Não'],
+                                      ['Modo', d.modoManual ? '⚠️ Manual' : '🤖 Automático'],
+                                      ['Buzzer', d.buzzerAtivo ? '🔊 Ativo' : 'Inativo'],
+                                    ].map(([k, v]) => (
+                                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid #dbeafe' }}>
+                                        <span style={{ color: 'var(--gray-600)' }}>{k}</span>
+                                        <span style={{ fontWeight: '500' }}>{v}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* ── Tabela de Confiabilidade ──────────────── */}
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                  <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary-blue)', margin: '0 0 0.5rem 0' }}>
+                                    📊 Cálculo de Confiabilidade
+                                  </p>
+                                  {isRuptura ? (
+                                    <div style={{ padding: '0.625rem 0.875rem', backgroundColor: '#f0fdf4', borderRadius: '0.375rem', border: '1px solid #bbf7d0', fontSize: '0.8rem', color: '#166534' }}>
+                                      <strong>100% — Estado Especial: RUPTURA</strong><br />
+                                      <span style={{ color: '#4b5563', fontSize: '0.75rem' }}>
+                                        Durante a ruptura, o sensor físico confirma o estado diretamente por hardware.
+                                        Todos os descontos normais são ignorados — a confiabilidade é forçada para 100%
+                                        pois não há ambiguidade: o dado é real e o estado é crítico.
+                                      </span>
+                                    </div>
+                                  ) : det ? (
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                                      <thead>
+                                        <tr style={{ backgroundColor: '#dbeafe' }}>
+                                          <th style={{ padding: '0.375rem 0.625rem', textAlign: 'left', fontWeight: '600', color: '#1e40af' }}>Critério</th>
+                                          <th style={{ padding: '0.375rem 0.625rem', textAlign: 'center', fontWeight: '600', color: '#1e40af' }}>Desconto máx.</th>
+                                          <th style={{ padding: '0.375rem 0.625rem', textAlign: 'center', fontWeight: '600', color: '#1e40af' }}>Aplicado</th>
+                                          <th style={{ padding: '0.375rem 0.625rem', textAlign: 'left', fontWeight: '600', color: '#1e40af' }}>Descrição</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {Object.entries(det.descontos || {}).map(([chave, valor]) => {
+                                          const info = descontoInfo[chave] || { label: chave, max: '?', desc: '' };
+                                          const aplicado = valor > 0;
+                                          return (
+                                            <tr key={chave} style={{ borderBottom: '1px solid #bfdbfe', backgroundColor: aplicado ? '#fef9c3' : 'white' }}>
+                                              <td style={{ padding: '0.375rem 0.625rem', fontWeight: aplicado ? '600' : '400', color: aplicado ? '#92400e' : '#4b5563' }}>
+                                                {info.label}
+                                              </td>
+                                              <td style={{ padding: '0.375rem 0.625rem', textAlign: 'center', color: '#6b7280' }}>
+                                                −{info.max}%
+                                              </td>
+                                              <td style={{ padding: '0.375rem 0.625rem', textAlign: 'center', fontWeight: '700', color: aplicado ? '#dc2626' : '#16a34a' }}>
+                                                {aplicado ? `−${valor}%` : '0%'}
+                                              </td>
+                                              <td style={{ padding: '0.375rem 0.625rem', color: '#6b7280', fontStyle: aplicado ? 'normal' : 'italic' }}>
+                                                {info.desc}
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                        {/* Linha de total */}
+                                        <tr style={{ backgroundColor: '#eff6ff', borderTop: '2px solid #93c5fd' }}>
+                                          <td style={{ padding: '0.375rem 0.625rem', fontWeight: '700', color: '#1e40af' }}>
+                                            Base (100%) − Total descontos
+                                          </td>
+                                          <td style={{ padding: '0.375rem 0.625rem', textAlign: 'center', color: '#6b7280' }}>—</td>
+                                          <td style={{ padding: '0.375rem 0.625rem', textAlign: 'center', fontWeight: '700', color: '#dc2626' }}>
+                                            −{det.total_desconto || 0}%
+                                          </td>
+                                          <td style={{ padding: '0.375rem 0.625rem' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                                              <span style={{ color: '#6b7280' }}>Resultado final:</span>
+                                              <span style={{
+                                                fontWeight: '700', fontSize: '0.875rem',
+                                                color: det.resultado >= 90 ? '#16a34a' : det.resultado >= 70 ? '#d97706' : '#dc2626'
+                                              }}>
+                                                {det.resultado}%
+                                              </span>
                                             </span>
-                                          </span>
-                                        </td>
-                                      </tr>
-                                    </tbody>
-                                  </table>
-                                ) : (
-                                  <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #bfdbfe', fontSize: '0.75rem', color: '#6b7280' }}>
-                                    Detalhes de confiabilidade não disponíveis para este registro (firmware anterior à v12).
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  ) : (
+                                    <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #bfdbfe', fontSize: '0.75rem', color: '#6b7280' }}>
+                                      Detalhes de confiabilidade não disponíveis para este registro (firmware anterior à v12).
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* ── Recomendação ─────────────────────────── */}
+                                {d.recomendacao && (
+                                  <div style={{ gridColumn: '1 / -1' }}>
+                                    <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary-blue)', margin: '0 0 0.25rem 0' }}>💡 Recomendação do Sistema</p>
+                                    <p style={{ fontSize: '0.8rem', margin: 0, padding: '0.625rem 0.875rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #bfdbfe', lineHeight: 1.5 }}>
+                                      {d.recomendacao}
+                                    </p>
                                   </div>
                                 )}
                               </div>
-
-                              {/* ── Recomendação ─────────────────────────── */}
-                              {d.recomendacao && (
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                  <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary-blue)', margin: '0 0 0.25rem 0' }}>💡 Recomendação do Sistema</p>
-                                  <p style={{ fontSize: '0.8rem', margin: 0, padding: '0.625rem 0.875rem', backgroundColor: 'white', borderRadius: '0.375rem', border: '1px solid #bfdbfe', lineHeight: 1.5 }}>
-                                    {d.recomendacao}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
+                            </td>
+                          </tr>
                         );
                       })()}
                     </>

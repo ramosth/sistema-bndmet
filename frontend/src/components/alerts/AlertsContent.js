@@ -67,7 +67,7 @@ const ApiBadge = ({ status, label }) => {
 const ConfBadge = ({ value }) => {
   if (value == null) return <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>—</span>;
   const color = value >= 90 ? "#166534" : value >= 70 ? "#854d0e" : "#991b1b";
-  const bg    = value >= 90 ? "#dcfce7" : value >= 70 ? "#fef9c3" : "#fee2e2";
+  const bg = value >= 90 ? "#dcfce7" : value >= 70 ? "#fef9c3" : "#fee2e2";
   return (
     <span style={{
       padding: "0.125rem 0.4rem", borderRadius: "0.25rem",
@@ -83,16 +83,16 @@ const ConfBadge = ({ value }) => {
 //  Componente principal
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AlertsContent() {
-  const [allAlerts,      setAllAlerts]      = useState([]);
+  const [allAlerts, setAllAlerts] = useState([]);
   const [filteredAlerts, setFilteredAlerts] = useState([]);
-  const [visibleAlerts,  setVisibleAlerts]  = useState([]);
-  const [loading,        setLoading]        = useState(false);
+  const [visibleAlerts, setVisibleAlerts] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
-  const [sendingAlert,   setSendingAlert]   = useState(false);
-  const [alertaOrigem,   setAlertaOrigem]   = useState(null);
-  const [filtroNivel,    setFiltroNivel]    = useState("todos");
-  const [expandedCard,   setExpandedCard]   = useState(null);
-  const [alertStats,     setAlertStats]     = useState(null);
+  const [sendingAlert, setSendingAlert] = useState(false);
+  const [alertaOrigem, setAlertaOrigem] = useState(null);
+  const [filtroNivel, setFiltroNivel] = useState("todos");
+  const [expandedCard, setExpandedCard] = useState(null);
+  const [alertStats, setAlertStats] = useState(null);
 
   const pagination = usePagination(1, 10);
 
@@ -128,9 +128,9 @@ export default function AlertsContent() {
   // ── Filtro ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const mapa = {
-      amarelo:  (a) => a.nivelAlerta === "AMARELO",
+      amarelo: (a) => a.nivelAlerta === "AMARELO",
       vermelho: (a) => isVermelhoPuro(a),
-      ruptura:  (a) => isRupturaAlert(a),
+      ruptura: (a) => isRupturaAlert(a),
     };
     const result = filtroNivel === "todos" ? allAlerts : allAlerts.filter(mapa[filtroNivel] || (() => true));
     setFilteredAlerts(result);
@@ -146,15 +146,31 @@ export default function AlertsContent() {
 
   // ── Ações ─────────────────────────────────────────────────────────────────
   const handleNotificarAlerta = (alerta) => { setAlertaOrigem(alerta); setShowAlertModal(true); };
-  const handleEnviarAlertaNovo = ()      => { setAlertaOrigem(null);   setShowAlertModal(true); };
-  const handleCloseModal = ()            => { setShowAlertModal(false); setAlertaOrigem(null); };
+  const handleEnviarAlertaNovo = () => { setAlertaOrigem(null); setShowAlertModal(true); };
+  const handleCloseModal = () => { setShowAlertModal(false); setAlertaOrigem(null); };
 
   const sendMassAlert = async (alertData) => {
     setSendingAlert(true);
     try {
       const response = await alertService.enviarAlertaMassa(alertData);
       if (response.success) {
-        toast.success(`Alerta enviado para ${response.data.totalSucesso} usuários!`);
+        const { totalSucesso, totalFalhas } = response.data;
+        const mensagem = `Alerta enviado: ${totalSucesso} sucesso${totalSucesso !== 1 ? 's' : ''} e ${totalFalhas} falha${totalFalhas !== 1 ? 's' : ''}. Verifique os logs para detalhes.`;
+
+        if (totalFalhas > 0) {
+          toast(mensagem, {
+            duration: 6000,
+            icon: '⚠️',
+            style: {
+              background: '#fef9c3',
+              color: '#854d0e',
+              border: '1px solid #fde047',
+            },
+          });
+        } else {
+          toast.success(mensagem, { duration: 6000 });
+        }
+
         handleCloseModal();
       } else {
         throw new Error(response.message);
@@ -168,10 +184,10 @@ export default function AlertsContent() {
 
   // ── Estatísticas ──────────────────────────────────────────────────────────
   const stats = {
-    total:    allAlerts.length,
+    total: allAlerts.length,
     vermelho: allAlerts.filter(a => isVermelhoPuro(a)).length,
-    amarelo:  allAlerts.filter(a => a.nivelAlerta === "AMARELO").length,
-    ruptura:  allAlerts.filter(a => isRupturaAlert(a)).length,
+    amarelo: allAlerts.filter(a => a.nivelAlerta === "AMARELO").length,
+    ruptura: allAlerts.filter(a => isRupturaAlert(a)).length,
   };
 
   const totalPages = Math.ceil(filteredAlerts.length / pagination.limit);
@@ -207,11 +223,11 @@ export default function AlertsContent() {
         gap: "1rem", marginBottom: "1.5rem",
       }}>
         {[
-          { label: "Total de Alertas", value: stats.total,    color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
-          { label: "🔴 Críticos",      value: stats.vermelho, color: "#dc2626", bg: "#fef2f2", border: "#fca5a5" },
-          { label: "🟡 Atenção",       value: stats.amarelo,  color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-          { label: "🚨 Rupturas",      value: stats.ruptura,  color: "#7c3aed", bg: "#f5f3ff", border: "#c4b5fd" },
-          { label: "📨 Enviados (30d)",   value: alertStats?.alertasUltimos30Dias ?? "—", color: "#0891b2", bg: "#f0f9ff", border: "#bae6fd", sub: "via Central de Alertas" },
+          { label: "Total de Alertas", value: stats.total, color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
+          { label: "🔴 Críticos", value: stats.vermelho, color: "#dc2626", bg: "#fef2f2", border: "#fca5a5" },
+          { label: "🟡 Atenção", value: stats.amarelo, color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+          { label: "🚨 Rupturas", value: stats.ruptura, color: "#7c3aed", bg: "#f5f3ff", border: "#c4b5fd" },
+          { label: "📨 Enviados (30d)", value: alertStats?.alertasUltimos30Dias ?? "—", color: "#0891b2", bg: "#f0f9ff", border: "#bae6fd", sub: "via Central de Alertas" },
         ].map(({ label, value, color, bg, border, sub }) => (
           <div key={label} style={{
             padding: "1.25rem", borderRadius: "0.5rem", textAlign: "center",
@@ -245,10 +261,10 @@ export default function AlertsContent() {
           {/* Filtro por nível */}
           <div style={{ display: "flex", gap: "0.375rem" }}>
             {[
-              { id: "todos",    label: "Todos" },
+              { id: "todos", label: "Todos" },
               { id: "vermelho", label: "🔴 Vermelho" },
-              { id: "amarelo",  label: "🟡 Amarelo" },
-              { id: "ruptura",  label: "🚨 Ruptura" },
+              { id: "amarelo", label: "🟡 Amarelo" },
+              { id: "ruptura", label: "🚨 Ruptura" },
             ].map(({ id, label }) => (
               <button key={id} onClick={() => setFiltroNivel(id)} style={{
                 padding: "0.375rem 0.75rem", borderRadius: "0.375rem",
@@ -285,28 +301,28 @@ export default function AlertsContent() {
           <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
             {visibleAlerts.map((alert, index) => {
               const alertLevel = getAlertLevel(alert.nivelAlerta);
-              const isRuptura  = isRupturaAlert(alert);
+              const isRuptura = isRupturaAlert(alert);
               const isExpanded = expandedCard === index;
 
               // Componentes V_x
               const vx = [
-                { label: "V_lençol (×0,40)",  value: alert.vLencol },
-                { label: "V_ch.24h (×0,08)",  value: alert.vChuvaAtual },
-                { label: "V_ch.7d (×0,12)",   value: alert.vChuvaHistorica },
-                { label: "V_ch.30d (×0,10)",  value: alert.vChuvaMensal },
-                { label: "V_ch.fut (×0,15)",  value: alert.vChuvaFutura },
-                { label: "V_taxa (×0,10)",    value: alert.vTaxaVariacao },
+                { label: "V_lençol (×0,40)", value: alert.vLencol },
+                { label: "V_ch.24h (×0,08)", value: alert.vChuvaAtual },
+                { label: "V_ch.7d (×0,12)", value: alert.vChuvaHistorica },
+                { label: "V_ch.30d (×0,10)", value: alert.vChuvaMensal },
+                { label: "V_ch.fut (×0,15)", value: alert.vChuvaFutura },
+                { label: "V_taxa (×0,10)", value: alert.vTaxaVariacao },
                 { label: "V_pressão (×0,05)", value: alert.vPressao },
               ];
               const frSoma = vx.reduce((s, v) => s + (parseFloat(v.value) || 0), 0);
-              const det    = alert.dadosBrutos?.confiabilidade_detalhes || null;
+              const det = alert.dadosBrutos?.confiabilidade_detalhes || null;
 
               const descontoInfo = {
-                sensor_falha:        "Sensor físico com falha (ADC=1024)",
+                sensor_falha: "Sensor físico com falha (ADC=1024)",
                 bndmet_indisponivel: "API BNDMET indisponível",
-                qualidade_bndmet:    "Qualidade BNDMET < 80%",
-                owm_indisponivel:    "API OWM indisponível",
-                wifi_desconectado:   "WiFi desconectado",
+                qualidade_bndmet: "Qualidade BNDMET < 80%",
+                owm_indisponivel: "API OWM indisponível",
+                wifi_desconectado: "WiFi desconectado",
                 buffer_insuficiente: "Buffer histórico insuficiente",
               };
 
@@ -377,7 +393,7 @@ export default function AlertsContent() {
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                         <ConfBadge value={alert.confiabilidade} />
                         <ApiBadge status={alert.statusApiBndmet} label="BNDMET" />
-                        <ApiBadge status={alert.statusApiOwm}   label="OWM" />
+                        <ApiBadge status={alert.statusApiOwm} label="OWM" />
 
                         <button
                           onClick={() => setExpandedCard(isExpanded ? null : index)}
@@ -397,7 +413,7 @@ export default function AlertsContent() {
                           onClick={() => handleNotificarAlerta(alert)}
                           style={{
                             borderColor: isRuptura ? "#dc2626" : alertLevel.color,
-                            color:       isRuptura ? "#dc2626" : alertLevel.color,
+                            color: isRuptura ? "#dc2626" : alertLevel.color,
                             fontWeight: "600", fontSize: "0.75rem",
                           }}
                         >
@@ -417,7 +433,7 @@ export default function AlertsContent() {
                           label: "Umidade Solo",
                           value: `${fmt(alert.umidadeSolo)}%`,
                           color: parseFloat(alert.umidadeSolo) >= 30 ? "#dc2626"
-                               : parseFloat(alert.umidadeSolo) >= 20 ? "#d97706" : "#2563eb",
+                            : parseFloat(alert.umidadeSolo) >= 20 ? "#d97706" : "#2563eb",
                           sub: parseFloat(alert.umidadeSolo) >= 30 ? "⚠️ Acima do limiar" : null,
                         },
                         {
@@ -559,13 +575,13 @@ export default function AlertsContent() {
                           </p>
                           <div style={{ fontSize: "0.775rem" }}>
                             {[
-                              ["Temperatura",        `${fmt(alert.temperatura)} °C`],
-                              ["Umidade externa",    `${fmt(alert.umidadeExterna)}%`],
-                              ["Pressão atm.",       `${fmt(alert.pressaoAtmosferica)} hPa`],
-                              ["Vento",              `${fmt(alert.velocidadeVento)} m/s`],
-                              ["Descrição tempo",    alert.descricaoTempo || "—"],
-                              ["Chuva atual (OWM)",  `${fmt(alert.chuvaAtualOwm)} mm/h`],
-                              ["Taxa var. umidade",  fmt(alert.taxaVariacaoUmidade, 3)],
+                              ["Temperatura", `${fmt(alert.temperatura)} °C`],
+                              ["Umidade externa", `${fmt(alert.umidadeExterna)}%`],
+                              ["Pressão atm.", `${fmt(alert.pressaoAtmosferica)} hPa`],
+                              ["Vento", `${fmt(alert.velocidadeVento)} m/s`],
+                              ["Descrição tempo", alert.descricaoTempo || "—"],
+                              ["Chuva atual (OWM)", `${fmt(alert.chuvaAtualOwm)} mm/h`],
+                              ["Taxa var. umidade", fmt(alert.taxaVariacaoUmidade, 3)],
                             ].map(([k, v]) => (
                               <div key={k} style={{
                                 display: "flex", justifyContent: "space-between",
@@ -585,13 +601,13 @@ export default function AlertsContent() {
                           </p>
                           <div style={{ fontSize: "0.775rem" }}>
                             {[
-                              ["freeHeap",       `${(alert.dadosBrutos?.freeHeap || 0).toLocaleString("pt-BR")} bytes`],
-                              ["RSSI",           `${alert.dadosBrutos?.rssi || "—"} dBm`],
-                              ["Uptime",         `${Math.round((alert.dadosBrutos?.uptime || 0) / 1000)}s`],
-                              ["Tent. envio",    String(alert.dadosBrutos?.tentativasEnvio || 0)],
-                              ["Sensor OK",      alert.sensorOk ? "✅ Sim" : "❌ Não"],
-                              ["Modo",           alert.modoManual ? "⚠️ Manual" : "🤖 Automático"],
-                              ["Buzzer",         alert.buzzerAtivo ? "🔊 Ativo" : "Inativo"],
+                              ["freeHeap", `${(alert.dadosBrutos?.freeHeap || 0).toLocaleString("pt-BR")} bytes`],
+                              ["RSSI", `${alert.dadosBrutos?.rssi || "—"} dBm`],
+                              ["Uptime", `${Math.round((alert.dadosBrutos?.uptime || 0) / 1000)}s`],
+                              ["Tent. envio", String(alert.dadosBrutos?.tentativasEnvio || 0)],
+                              ["Sensor OK", alert.sensorOk ? "✅ Sim" : "❌ Não"],
+                              ["Modo", alert.modoManual ? "⚠️ Manual" : "🤖 Automático"],
+                              ["Buzzer", alert.buzzerAtivo ? "🔊 Ativo" : "Inativo"],
                             ].map(([k, v]) => (
                               <div key={k} style={{
                                 display: "flex", justifyContent: "space-between",
@@ -649,7 +665,7 @@ export default function AlertsContent() {
                                   <span style={{
                                     fontWeight: "700",
                                     color: det.resultado >= 90 ? "#16a34a"
-                                         : det.resultado >= 70 ? "#d97706" : "#dc2626",
+                                      : det.resultado >= 70 ? "#d97706" : "#dc2626",
                                   }}>
                                     {det.resultado}%
                                   </span>

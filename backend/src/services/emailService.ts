@@ -236,137 +236,238 @@ export class EmailService {
         return 'normal';
     }
 
-    // Gerar template HTML responsivo
+
+    // ── Parser estruturado: extrai campos da mensagem gerada pelo AlertForm ──
+    private static parsearMensagemSensor(texto: string): Record<string, string> | null {
+        if (!texto.includes('DADOS DO MONITORAMENTO DO SENSOR')) return null;
+        const get = (label: string) => {
+            const m = texto.match(new RegExp(label + '[^:]*:\\s*(.+)'));
+            return m ? m[1].trim() : '';
+        };
+        const recomBloco = texto.match(/RECOMENDAÇÃO:\s*\n([\s\S]*?)(?:\n━|$)/);
+        return {
+            dataHora:       get('Data/Hora'),
+            umidade:        get('Umidade do Solo'),
+            risco:          get('Risco Integrado'),
+            nivel:          get('Nível de Alerta'),
+            prev24h:        get('Próximas 24h'),
+            ult24h:         get('Últimas 24h'),
+            confiabilidade: get('Confiabilidade'),
+            apis:           (() => { const m = texto.match(/BNDMET:\s*(\w+)\s*\|\s*OWM:\s*(\w+)/); return m ? `BNDMET: ${m[1]} · OWM: ${m[2]}` : ''; })(),
+            recomendacao:   recomBloco ? recomBloco[1].trim() : '',
+        };
+    }
+
+    // Gerar template HTML
     private static gerarTemplateHtml(
         destinatario: { email: string; nome: string },
         dadosAlerta: { titulo: string; mensagem: string; nivelCriticidade: string },
         cor: string
     ): string {
         const agora = new Date();
-        const dataFormatada = agora.toLocaleString('pt-BR', {
+        const dataEnvio = agora.toLocaleString('pt-BR', {
             timeZone: 'America/Sao_Paulo',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
         });
 
-        // ✅ PRESERVAR FORMATAÇÃO DA MENSAGEM DO MODAL
-        // Converter quebras de linha \n para <br> e preservar espaçamento
-        const mensagemFormatada = dadosAlerta.mensagem
-            .replace(/\n/g, '<br>')
-            .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;')
-            .replace(/  /g, '&nbsp;&nbsp;'); // Preservar espaços duplos
+        const label  = this.obterLabelNivel(dadosAlerta.nivelCriticidade);
+        const icone  = dadosAlerta.nivelCriticidade === 'critico' ? '🚨'
+                     : dadosAlerta.nivelCriticidade === 'alto'    ? '⚠️'
+                     : dadosAlerta.nivelCriticidade === 'medio'   ? '⚠️' : 'ℹ️';
 
-        // ✅ USAR TÍTULO EXATO DO MODAL
-        const tituloExato = dadosAlerta.titulo.trim();
+        // Paleta por nível
+        const paleta: Record<string, { fundo: string; borda: string; texto: string; tagBg: string; tagFg: string }> = {
+            critico: { fundo: '#fff5f5', borda: '#fca5a5', texto: '#991b1b', tagBg: '#ef4444', tagFg: '#fff'     },
+            alto:    { fundo: '#fff7ed', borda: '#fdba74', texto: '#9a3412', tagBg: '#f97316', tagFg: '#fff'     },
+            medio:   { fundo: '#fefce8', borda: '#fde047', texto: '#854d0e', tagBg: '#eab308', tagFg: '#422006' },
+            baixo:   { fundo: '#f0fdf4', borda: '#86efac', texto: '#166534', tagBg: '#22c55e', tagFg: '#14532d' },
+        };
+        const p = paleta[dadosAlerta.nivelCriticidade] ?? paleta['baixo'];
 
-        return `
-<!DOCTYPE html>
-<html lang="pt-BR">
+        // Tenta parsear como dados de sensor; caso contrário usa texto simples
+        const sensor = this.parsearMensagemSensor(dadosAlerta.mensagem);
+
+        // ── Bloco de conteúdo da mensagem ────────────────────────────────────
+        const corpoMensagem = sensor ? `
+          <!-- Grid 2 colunas: Sensor + Precipitação -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+            <tr valign="top">
+              <!-- Coluna esquerda: dados do sensor -->
+              <td width="48%" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px 18px;">
+                <p style="margin:0 0 10px 0; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.1em;">Sensor</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr><td style="font-size:12px;color:#64748b;padding:3px 0;">🌡️ Umidade do solo</td></tr>
+                  <tr><td style="font-size:18px;font-weight:800;color:#0f172a;padding:2px 0 8px 0;">${sensor.umidade}</td></tr>
+                  <tr><td style="font-size:12px;color:#64748b;padding:3px 0;">⚠️ Risco integrado</td></tr>
+                  <tr><td style="font-size:18px;font-weight:800;color:${cor};padding:2px 0 8px 0;">${sensor.risco}</td></tr>
+                  <tr><td style="font-size:12px;color:#64748b;padding:3px 0;">🕐 Leitura</td></tr>
+                  <tr><td style="font-size:12px;font-weight:600;color:#334155;padding:2px 0;">${sensor.dataHora}</td></tr>
+                </table>
+              </td>
+
+              <td width="4%"></td>
+
+              <!-- Coluna direita: precipitação e qualidade -->
+              <td width="48%" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px 18px;">
+                <p style="margin:0 0 10px 0; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.1em;">Precipitação</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="font-size:12px;color:#64748b;padding:3px 0 1px 0;">💧 Próximas 24h</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:14px;font-weight:700;color:#0f172a;padding:0 0 8px 0;">${sensor.prev24h}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:12px;color:#64748b;padding:3px 0 1px 0;">🌧️ Últimas 24h</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:14px;font-weight:700;color:#0f172a;padding:0 0 8px 0;">${sensor.ult24h}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:12px;color:#64748b;padding:3px 0 1px 0;">📊 Confiabilidade</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:14px;font-weight:700;color:#0f172a;padding:0 0 4px 0;">${sensor.confiabilidade}</td>
+                  </tr>
+                  ${sensor.apis ? `<tr><td style="font-size:11px;color:#94a3b8;padding:2px 0;">${sensor.apis}</td></tr>` : ''}
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          ${sensor.recomendacao ? `
+          <!-- Recomendação -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+            <tr>
+              <td style="background:${p.fundo}; border-left:4px solid ${cor}; border-radius:0 6px 6px 0; padding:14px 18px;">
+                <p style="margin:0 0 4px 0; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.1em;">Recomendação</p>
+                <p style="margin:0; font-size:13px; color:${p.texto}; font-weight:600; line-height:1.5;">${sensor.recomendacao}</p>
+              </td>
+            </tr>
+          </table>` : ''}
+        ` : `
+          <!-- Mensagem de texto livre -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+            <tr>
+              <td style="background:#f8fafc; border-left:4px solid ${cor}; border-radius:0 6px 6px 0; padding:18px 20px;">
+                <p style="margin:0; font-size:14px; color:#334155; line-height:1.7; white-space:pre-wrap;">${dadosAlerta.mensagem.trim()}</p>
+              </td>
+            </tr>
+          </table>
+        `;
+
+        // ── Banner de urgência (só crítico/alto) ─────────────────────────────
+        const bannerUrgencia = (dadosAlerta.nivelCriticidade === 'critico' || dadosAlerta.nivelCriticidade === 'alto') ? `
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+            <tr>
+              <td style="background:${p.fundo}; border:1px solid ${p.borda}; border-radius:6px; padding:14px 18px;">
+                <p style="margin:0; font-size:13px; font-weight:700; color:${p.texto};">
+                  ${icone} Este alerta de nível <strong>${label}</strong> requer atenção imediata da equipe técnica responsável.
+                </p>
+              </td>
+            </tr>
+          </table>` : '';
+
+        return `<!DOCTYPE html>
+<html lang="pt-BR" xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alerta TCC IPRJ - ${this.obterLabelNivel(dadosAlerta.nivelCriticidade)}</title>
-    <style>
-        @media only screen and (max-width: 600px) {
-            .container { width: 100% !important; padding: 10px !important; }
-            .content { padding: 20px !important; }
-            .header h1 { font-size: 20px !important; }
-        }
-        .message-content {
-            line-height: 1.7;
-            word-wrap: break-word;
-            white-space: pre-wrap;
-        }
-    </style>
-</head>
-<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f5f5f5;">
-    <div class="container" style="max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-        
-        <!-- Header -->
-        <div class="header" style="background: linear-gradient(135deg, ${cor} 0%, ${cor}dd 100%); color: white; padding: 30px 20px; text-align: center;">
-            <h1 style="margin: 0; font-size: 26px; font-weight: 700;">🚨 Alerta do Sistema</h1>
-            <p style="margin: 8px 0 0 0; opacity: 0.95; font-size: 16px; font-weight: 500;">
-                Nível: ${this.obterLabelNivel(dadosAlerta.nivelCriticidade)}
-            </p>
-        </div>
-
-        <!-- Content -->
-        <div class="content" style="padding: 40px 30px;">
-            <p style="font-size: 18px; color: #333; margin-bottom: 25px; font-weight: 500;">
-                Olá <strong style="color: ${cor};">${destinatario.nome}</strong>,
-            </p>
-
-            <!-- ✅ CONTEÚDO EXATO DO MODAL -->
-            <div style="background: #f8fafc; border-left: 6px solid ${cor}; padding: 25px; margin: 25px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                <h2 style="color: #1f2937; margin: 0 0 18px 0; font-size: 20px; font-weight: 600;">
-                    ${tituloExato}
-                </h2>
-                <div class="message-content" style="color: #4b5563; margin: 0; font-size: 16px; line-height: 1.7;">
-                    ${mensagemFormatada}
-                </div>
-            </div>
-
-            <!-- Info Box -->
-            <div style="margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 10px; border: 1px solid #bfdbfe;">
-                <div style="display: flex; align-items: center; margin-bottom: 12px;">
-                    <span style="font-size: 20px; margin-right: 10px;">📍</span>
-                    <strong style="color: #1e40af; font-size: 16px;">Sistema de Monitoramento TCC IPRJ</strong>
-                </div>
-                <div style="color: #1e40af; font-size: 14px; margin-left: 30px;">
-                    🕐 <strong>Data/Hora:</strong> ${dataFormatada}<br>
-                    📧 <strong>Enviado para:</strong> ${destinatario.email}<br>
-                    🎯 <strong>Prioridade:</strong> ${this.obterLabelNivel(dadosAlerta.nivelCriticidade)}<br>
-                    📊 <strong>Nível:</strong> ${dadosAlerta.nivelCriticidade.toUpperCase()}
-                </div>
-            </div>
-
-            <!-- Action needed -->
-            ${dadosAlerta.nivelCriticidade === 'critico' || dadosAlerta.nivelCriticidade === 'alto' ? `
-            <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 10px; padding: 20px; margin: 25px 0; text-align: center;">
-                <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
-                <p style="color: #dc2626; font-weight: 600; margin: 0; font-size: 16px;">
-                    AÇÃO IMEDIATA NECESSÁRIA
-                </p>
-                <p style="color: #991b1b; margin: 8px 0 0 0; font-size: 14px;">
-                    Este alerta de nível <strong>${dadosAlerta.nivelCriticidade.toUpperCase()}</strong> requer atenção urgente da equipe técnica
-                </p>
-            </div>
-            ` : dadosAlerta.nivelCriticidade === 'medio' ? `
-            <div style="background: #fffbeb; border: 2px solid #fed7aa; border-radius: 10px; padding: 20px; margin: 25px 0; text-align: center;">
-                <div style="font-size: 20px; margin-bottom: 8px;">⚠️</div>
-                <p style="color: #d97706; font-weight: 600; margin: 0; font-size: 15px;">
-                    ATENÇÃO NECESSÁRIA
-                </p>
-                <p style="color: #92400e; margin: 6px 0 0 0; font-size: 13px;">
-                    Monitore a situação e tome as medidas preventivas adequadas
-                </p>
-            </div>
-            ` : ''}
-
-            <p style="color: #6b7280; font-size: 14px; margin: 30px 0 0 0; line-height: 1.6;">
-                Este é um alerta automático do sistema TCC IPRJ. Para mais informações, acesse o painel de controle ou entre em contato com a equipe técnica.
-            </p>
-        </div>
-
-        <!-- Footer -->
-        <div style="background: #f9fafb; padding: 25px 30px; border-top: 1px solid #e5e7eb; text-align: center;">
-            <div style="margin-bottom: 15px;">
-                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjMzc4M2ZmIi8+Cjwvc3ZnPgo=" alt="TCC IPRJ" style="width: 24px; height: 24px; margin-right: 8px; vertical-align: middle;">
-                <span style="color: #374151; font-weight: 600; font-size: 16px;">Sistema TCC IPRJ</span>
-            </div>
-            <p style="margin: 0; color: #6b7280; font-size: 12px; line-height: 1.5;">
-                © 2026 Sistema TCC IPRJ - Monitoramento de Barragens<br>
-                <span style="color: #9ca3af;">Este email foi enviado automaticamente, não responda a este endereço.</span>
-            </p>
-        </div>
-    </div>
-</body>
-</html>
-    `;
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>${label} — Sistema TCC IPRJ</title>
+  <style>
+    body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+    table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}
+    body{margin:0!important;padding:0!important;background-color:#ffffff}
+    @media only screen and (max-width:600px){
+      .two-col td{display:block!important;width:100%!important;padding-bottom:12px!important}
+      .wrap{padding:20px 16px!important}
     }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#ffffff;">
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;width:100%;">
+  <tr>
+    <td align="left" style="padding:0;margin:0;">
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;">
+
+        <!-- HEADER -->
+        <tr>
+          <td style="background:${cor};padding:32px 40px;text-align:center;">
+            <span style="display:inline-block;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);
+                         border-radius:16px;padding:3px 12px;font-size:11px;font-weight:700;color:#fff;
+                         text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">
+              ${icone} Nível ${label}
+            </span>
+            <h1 style="margin:0 0 4px 0;font-size:22px;font-weight:800;color:#fff;
+                       font-family:'Segoe UI',Arial,sans-serif;line-height:1.25;">
+              Alerta do Sistema de Monitoramento
+            </h1>
+            <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.82);font-family:'Segoe UI',Arial,sans-serif;">
+              Sistema TCC IPRJ — Barragens de Rejeitos
+            </p>
+          </td>
+        </tr>
+
+        <!-- CORPO -->
+        <tr>
+          <td class="wrap" style="background:#ffffff;padding:28px 40px;font-family:'Segoe UI',Arial,sans-serif;">
+
+            <!-- Saudação + título -->
+            <p style="margin:0 0 4px 0;font-size:15px;color:#1e293b;font-weight:500;">
+              Olá, <strong style="color:${cor};">${destinatario.nome}</strong>
+            </p>
+            <p style="margin:0 0 16px 0;font-size:13px;color:#64748b;font-weight:600;
+                      text-transform:uppercase;letter-spacing:0.04em;">
+              ${dadosAlerta.titulo}
+            </p>
+
+            <!-- Conteúdo principal (sensor estruturado ou texto livre) -->
+            ${corpoMensagem}
+
+            <!-- Banner de urgência -->
+            ${bannerUrgencia}
+
+            <!-- Linha de metadados -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                   style="border-top:1px solid #f1f5f9;margin-top:16px;padding-top:14px;">
+              <tr>
+                <td style="font-size:11px;color:#94a3b8;">
+                  🕐 Enviado em ${dataEnvio} &nbsp;·&nbsp;
+                  📧 ${destinatario.email} &nbsp;·&nbsp;
+                  <span style="display:inline-block;background:${p.tagBg};color:${p.tagFg};
+                               font-size:10px;font-weight:700;padding:1px 7px;border-radius:8px;
+                               text-transform:uppercase;letter-spacing:0.05em;">${label}</span>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td style="background:#0f172a;padding:20px 40px;text-align:center;">
+            <p style="margin:0 0 3px 0;font-size:13px;font-weight:700;color:#f1f5f9;">Sistema TCC IPRJ</p>
+            <p style="margin:0;font-size:11px;color:#475569;line-height:1.5;">
+              Engenharia da Computação / UERJ-IPRJ &nbsp;·&nbsp;
+              © 2026 &nbsp;·&nbsp; E-mail automático, não responda
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>`;
+    }
+
 
     // Gerar texto simples (fallback) - ✅ PRESERVAR CONTEÚDO EXATO
     private static gerarTextoSimples(
