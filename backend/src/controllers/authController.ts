@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { AuthService } from '../services/authService';
 import { sendSuccess, sendError, sendPaginated } from '../utils/response';
+import prisma from '../config/database';
 
 export class AuthController {
   // Login
@@ -459,6 +460,29 @@ export class AuthController {
       return sendPaginated(res, usuarios, pagina, limite, total);
     } catch (error: any) {
       console.error('Erro ao listar usuários inativos:', error);
+      return sendError(res, error.message || 'Erro interno do servidor', 500);
+    }
+  }
+
+  // Listar log de alertas enviados (logs_alertas)
+  static async listarLogsAlertas(req: Request, res: Response) {
+    try {
+      const pagina = parseInt(req.query.pagina as string) || 1;
+      const limite = Math.min(parseInt(req.query.limite as string) || 20, 100);
+      const skip   = (pagina - 1) * limite;
+
+      const [logs, total] = await Promise.all([
+        prisma.logsAlertas.findMany({
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limite,
+        }),
+        prisma.logsAlertas.count(),
+      ]);
+
+      return sendPaginated(res, logs, pagina, limite, total, `${total} registros encontrados`);
+    } catch (error: any) {
+      console.error('Erro ao listar logs de alertas:', error);
       return sendError(res, error.message || 'Erro interno do servidor', 500);
     }
   }

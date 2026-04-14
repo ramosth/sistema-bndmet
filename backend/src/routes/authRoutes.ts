@@ -830,5 +830,36 @@ router.delete('/usuarios-admin/:id', verificarSuperAdmin, AuthController.deletar
  */
 router.get('/usuarios-inativos', AuthController.listarUsuariosInativos);
 
+/**
+ * @swagger
+ * /auth/logs-alertas:
+ *   get:
+ *     tags: [Autenticação]
+ *     summary: Listar log de alertas enviados
+ *     description: Retorna o histórico de alertas enviados via Central de Alertas, com detalhes de entrega por destinatário
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: pagina
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número da página
+ *       - in: query
+ *         name: limite
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *         description: Registros por página (máximo 100)
+ *     responses:
+ *       200:
+ *         description: Lista paginada de logs de alertas enviados
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ */
+router.get('/logs-alertas', AuthController.listarLogsAlertas);
+
 
 export default router;

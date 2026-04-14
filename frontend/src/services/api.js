@@ -266,6 +266,12 @@ export const alertService = {
     console.log('📢 Enviando alerta em massa:', alertData);
     const response = await api.post('/auth/enviar-alerta', alertData);
     return response.data;
+  },
+
+  // Buscar log de alertas enviados via Central de Alertas
+  getLogsAlertas: async (pagina = 1, limite = 20) => {
+    const response = await api.get('/auth/logs-alertas', { params: { pagina, limite } });
+    return response.data;
   }
 };
 

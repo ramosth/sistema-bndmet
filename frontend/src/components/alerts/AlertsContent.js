@@ -5,8 +5,9 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import {
-  AlertTriangle, Send, RefreshCw, Users, Bell,
-  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Zap
+  AlertTriangle, Send, RefreshCw, Users, Bell, History,
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Zap,
+  CheckCircle, XCircle, AlertCircle, Mail
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -94,6 +95,15 @@ export default function AlertsContent() {
   const [expandedCard, setExpandedCard] = useState(null);
   const [alertStats, setAlertStats] = useState(null);
 
+  // ── Estado do modal de Log de Envios ─────────────────────────────────────
+  const [showLogModal,  setShowLogModal]  = useState(false);
+  const [logsEnvios,    setLogsEnvios]    = useState([]);
+  const [logsLoading,   setLogsLoading]   = useState(false);
+  const [logsTotal,     setLogsTotal]     = useState(0);
+  const [logsPagina,    setLogsPagina]    = useState(1);
+  const [expandedLog,   setExpandedLog]   = useState(null);
+  const LOGS_POR_PAGINA = 10;
+
   const pagination = usePagination(1, 10);
 
   // ── Carregamento ──────────────────────────────────────────────────────────
@@ -121,6 +131,32 @@ export default function AlertsContent() {
     } catch (error) {
       console.error('Erro ao carregar estatísticas de alertas:', error);
     }
+  };
+
+  // ── Log de Envios ────────────────────────────────────────────────────────
+  const loadLogsEnvios = async (pagina = 1) => {
+    setLogsLoading(true);
+    try {
+      const response = await alertService.getLogsAlertas(pagina, LOGS_POR_PAGINA);
+      if (response.success) {
+        setLogsEnvios(response.data || []);
+        setLogsTotal(response.pagination?.total || 0);
+        setLogsPagina(pagina);
+        setExpandedLog(null);
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || error.message || "Erro ao carregar logs de alertas");
+      setLogsEnvios([]);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const handleAbrirLogs = () => {
+    setShowLogModal(true);
+    if (logsEnvios.length === 0) loadLogsEnvios(1);
   };
 
   useEffect(() => { loadCriticalAlerts(); loadUserStats(); }, []);
@@ -209,6 +245,9 @@ export default function AlertsContent() {
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <Button variant="outline" onClick={loadCriticalAlerts} loading={loading}>
             <RefreshCw size={16} /> Atualizar
+          </Button>
+          <Button variant="outline" onClick={handleAbrirLogs}>
+            <History size={16} /> Log de Envios
           </Button>
           <Button variant="primary" onClick={handleEnviarAlertaNovo}>
             <Send size={16} /> Enviar Alerta
@@ -723,6 +762,225 @@ export default function AlertsContent() {
           </div>
         )}
       </Card>
+
+      {/* ── Modal: Log de Alertas Enviados ─────────────────────────────── */}
+      <Modal
+        isOpen={showLogModal}
+        onClose={() => { setShowLogModal(false); setExpandedLog(null); }}
+        title="📋 Log de Alertas Enviados"
+        size="xl"
+      >
+        {/* Cabeçalho do modal */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem",
+        }}>
+          <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+            {logsLoading ? "Carregando..." : `${logsTotal} ${logsTotal === 1 ? "registro" : "registros"} no histórico`}
+          </span>
+          <Button variant="outline" size="small" onClick={() => loadLogsEnvios(logsPagina)} loading={logsLoading}>
+            <RefreshCw size={14} /> Atualizar
+          </Button>
+        </div>
+
+        {/* Conteúdo */}
+        {logsLoading && logsEnvios.length === 0 ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "3rem" }}>
+            <LoadingSpinner size="large" />
+          </div>
+        ) : logsEnvios.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "3rem", color: "#9ca3af" }}>
+            <Mail size={48} style={{ margin: "0 auto 1rem", opacity: 0.3 }} />
+            <p style={{ fontSize: "1rem", color: "#6b7280", marginBottom: "0.5rem" }}>
+              Nenhum alerta foi enviado ainda.
+            </p>
+            <p style={{ fontSize: "0.875rem" }}>
+              Use o botão "Enviar Alerta" para notificar os usuários cadastrados.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f9fafb" }}>
+                    {[
+                      ["Data / Hora", "left"], ["Título", "left"], ["Nível", "center"],
+                      ["Destinatários", "center"], ["Canal", "center"],
+                      ["Resultado", "center"], ["", "center"],
+                    ].map(([h, align]) => (
+                      <th key={h} style={{
+                        padding: "0.625rem 0.75rem", textAlign: align,
+                        fontWeight: "600", color: "#6b7280", fontSize: "0.7rem",
+                        textTransform: "uppercase", letterSpacing: "0.04em",
+                        borderBottom: "2px solid #e5e7eb", whiteSpace: "nowrap",
+                      }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {logsEnvios.map((log, i) => {
+                    const isExp   = expandedLog === i;
+                    const sucPct  = log.totalEnviados > 0 ? Math.round((log.totalSucesso / log.totalEnviados) * 100) : 0;
+                    const resultColor = sucPct === 100 ? "#16a34a" : sucPct > 0 ? "#d97706" : "#dc2626";
+                    const ResultIcon  = sucPct === 100 ? CheckCircle : sucPct > 0 ? AlertCircle : XCircle;
+                    const nivelMap  = {
+                      baixo:   { label: "Informativo", bg: "#dcfce7", color: "#166534" },
+                      medio:   { label: "Atenção",     bg: "#fef9c3", color: "#854d0e" },
+                      critico: { label: "Crítico",     bg: "#fee2e2", color: "#991b1b" },
+                    };
+                    const destMap   = { basico: "Usuários Básicos", admin: "Administradores", todos: "Todos" };
+                    const nivel     = nivelMap[log.nivelCriticidade] || { label: log.nivelCriticidade, bg: "#f3f4f6", color: "#374151" };
+                    const detalhes  = Array.isArray(log.detalhesEnvio) ? log.detalhesEnvio : [];
+
+                    return (
+                      <>
+                        <tr key={log.id || i} style={{
+                          borderBottom: isExp ? "none" : "1px solid #f3f4f6",
+                          backgroundColor: isExp ? "#eff6ff" : "transparent",
+                          transition: "background 0.12s",
+                        }}>
+                          <td style={{ padding: "0.625rem 0.75rem", whiteSpace: "nowrap", color: "#4b5563", fontSize: "0.78rem" }}>
+                            {formatDateBR(log.createdAt)}
+                          </td>
+                          <td style={{ padding: "0.625rem 0.75rem", maxWidth: "200px" }}>
+                            <span title={log.titulo} style={{
+                              display: "block", overflow: "hidden",
+                              textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              fontWeight: "500", color: "#111827",
+                            }}>
+                              {log.titulo}
+                            </span>
+                          </td>
+                          <td style={{ padding: "0.625rem 0.75rem", textAlign: "center" }}>
+                            <span style={{
+                              padding: "0.2rem 0.5rem", borderRadius: "9999px",
+                              fontSize: "0.7rem", fontWeight: "700",
+                              backgroundColor: nivel.bg, color: nivel.color,
+                            }}>
+                              {nivel.label}
+                            </span>
+                          </td>
+                          <td style={{ padding: "0.625rem 0.75rem", textAlign: "center", color: "#374151", fontSize: "0.78rem" }}>
+                            {destMap[log.tipoDestinatario] || log.tipoDestinatario || "—"}
+                          </td>
+                          <td style={{ padding: "0.625rem 0.75rem", textAlign: "center" }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.75rem", color: "#0891b2" }}>
+                              <Mail size={13} /> {log.canaisEnvio || "email"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "0.625rem 0.75rem", textAlign: "center" }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontWeight: "700", color: resultColor, fontSize: "0.8rem" }}>
+                              <ResultIcon size={14} /> {log.totalSucesso}/{log.totalEnviados}
+                            </span>
+                            {log.totalFalhas > 0 && (
+                              <div style={{ fontSize: "0.65rem", color: "#dc2626", marginTop: "0.1rem" }}>
+                                {log.totalFalhas} falha{log.totalFalhas > 1 ? "s" : ""}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: "0.625rem 0.75rem", textAlign: "center" }}>
+                            {detalhes.length > 0 && (
+                              <button
+                                onClick={() => setExpandedLog(isExp ? null : i)}
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: "0.2rem",
+                                  padding: "0.2rem 0.5rem", borderRadius: "0.25rem",
+                                  border: "1px solid #e5e7eb", backgroundColor: "white",
+                                  color: "#6b7280", fontSize: "0.72rem", cursor: "pointer",
+                                }}
+                              >
+                                {isExp ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                {isExp ? "Fechar" : "Detalhes"}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+
+                        {/* Linha expandida — detalhes por destinatário */}
+                        {isExp && detalhes.length > 0 && (
+                          <tr key={`log-exp-${i}`}>
+                            <td colSpan={7} style={{
+                              padding: "0 0.75rem 0.875rem 0.75rem",
+                              backgroundColor: "#eff6ff",
+                              borderBottom: "2px solid #bfdbfe",
+                            }}>
+                              <div style={{ padding: "0.75rem", backgroundColor: "white", borderRadius: "0.375rem", border: "1px solid #dbeafe" }}>
+                                <p style={{ fontSize: "0.72rem", fontWeight: "700", color: "#1d4ed8", margin: "0 0 0.5rem 0" }}>
+                                  📧 Detalhes de entrega — {log.totalSucesso} de {log.totalEnviados} enviados com sucesso
+                                </p>
+                                {log.mensagem && (
+                                  <div style={{ padding: "0.5rem 0.75rem", marginBottom: "0.75rem", backgroundColor: "#f8fafc", borderRadius: "0.25rem", border: "1px solid #e2e8f0", fontSize: "0.75rem", color: "#4b5563" }}>
+                                    <span style={{ fontWeight: "600", color: "#374151" }}>Mensagem: </span>{log.mensagem}
+                                  </div>
+                                )}
+                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+                                  <thead>
+                                    <tr style={{ backgroundColor: "#f1f5f9" }}>
+                                      {["Nome", "E-mail", "Status", "Detalhe"].map(h => (
+                                        <th key={h} style={{ padding: "0.375rem 0.5rem", textAlign: "left", fontWeight: "600", color: "#6b7280", borderBottom: "1px solid #e2e8f0" }}>{h}</th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {detalhes.map((d, di) => {
+                                      const ok = d.status === "enviado" || d.status === "success";
+                                      return (
+                                        <tr key={di} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                          <td style={{ padding: "0.375rem 0.5rem", color: "#111827", fontWeight: "500" }}>{d.nome || "—"}</td>
+                                          <td style={{ padding: "0.375rem 0.5rem", color: "#6b7280", fontFamily: "monospace" }}>{d.email || d.destinatarioId || "—"}</td>
+                                          <td style={{ padding: "0.375rem 0.5rem" }}>
+                                            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem", fontSize: "0.7rem", fontWeight: "600", color: ok ? "#166534" : "#991b1b" }}>
+                                              {ok ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                                              {ok ? "Enviado" : "Falha"}
+                                            </span>
+                                          </td>
+                                          <td style={{ padding: "0.375rem 0.5rem", color: ok ? "#6b7280" : "#dc2626", fontSize: "0.7rem" }}>
+                                            {!ok && d.erro ? d.erro : ok ? "—" : "Erro desconhecido"}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Paginação do modal */}
+            {logsTotal > LOGS_POR_PAGINA && (
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                marginTop: "1rem", paddingTop: "0.875rem", borderTop: "1px solid #e5e7eb",
+                flexWrap: "wrap", gap: "0.5rem",
+              }}>
+                <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>
+                  Página {logsPagina} de {Math.ceil(logsTotal / LOGS_POR_PAGINA)} · {logsTotal} registros
+                </span>
+                <div style={{ display: "flex", gap: "0.375rem" }}>
+                  <Button variant="outline" size="small"
+                    onClick={() => loadLogsEnvios(logsPagina - 1)}
+                    disabled={logsPagina <= 1 || logsLoading}>
+                    <ChevronLeft size={14} /> Anterior
+                  </Button>
+                  <Button variant="outline" size="small"
+                    onClick={() => loadLogsEnvios(logsPagina + 1)}
+                    disabled={logsPagina >= Math.ceil(logsTotal / LOGS_POR_PAGINA) || logsLoading}>
+                    Próxima <ChevronRight size={14} />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </Modal>
 
       {/* Modal */}
       <Modal

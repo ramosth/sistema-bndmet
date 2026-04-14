@@ -323,6 +323,20 @@ export default function ReportsContent() {
       rssi: mms(rssi),
       tentativasEnvio: mms(env),
       uptimeMax: upt.length ? Math.max(...upt) : 0,
+
+      // Valores da leitura mais recente — para exibição na seção 2
+      // O array vem ordenado por timestamp DESC da API (índice 0 = mais recente)
+      ultPrecip24h:     n((data[0] || {}).precipitacao24h),
+      ultPrecip7d:      n((data[0] || {}).precipitacao7d),
+      ultPrecip30d:     n((data[0] || {}).precipitacao30d),
+      ultPrecipAtual:   n((data[0] || {}).precipitacaoAtual),
+      ultTemperatura:   n((data[0] || {}).temperatura),
+      ultUmidadeExt:    n((data[0] || {}).umidadeExterna),
+      ultPressao:       n((data[0] || {}).pressaoAtmosferica),
+      ultVento:         n((data[0] || {}).velocidadeVento),
+      ultChuvaAtualOwm: n((data[0] || {}).chuvaAtualOwm),
+      ultChuvaFutura:   n((data[0] || {}).chuvaFutura24h),
+      ultTimestamp:     (data[0] || {}).timestamp || null,
     };
   };
 
@@ -720,25 +734,30 @@ export default function ReportsContent() {
           <SectionCard sKey="s2" title="2. Dados Meteorológicos e Pluviométricos" className="mb-4">
             <div style={{ padding: '0.625rem 0.875rem', backgroundColor: 'var(--blue-50)', borderRadius: '0.5rem', border: '1px solid var(--blue-200)', marginBottom: '1rem', fontSize: '0.8rem', color: 'var(--blue-700)' }}>
               <strong>Fontes:</strong> Precipitações históricas via BNDMET/DECEA — estação <strong>{s.estacao}</strong> (Alberto Flores, rede ANA). Condições e previsão via <strong>OpenWeatherMap (OWM)</strong>.
+              {s.ultTimestamp && (
+                <span style={{ marginLeft: '0.5rem', color: 'var(--blue-600)' }}>
+                  · Valores da leitura mais recente do período: <strong>{new Date(s.ultTimestamp).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</strong>
+                </span>
+              )}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
               <div>
                 <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--gray-700)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                   <CloudRain size={15} /> Precipitação (BNDMET D6594)
                 </h4>
-                <StatRow label="Acumulado 24h" value={fmt(s.precip24h?.media)} unit="mm" tooltip="Precipitação acumulada nas últimas 24h via endpoint I006 da API BNDMET. Limiar máximo: 50 mm. Fator: F_ch.24h = precip24h / 50 (Equação 1). Componente: V_ch.24h = F_ch.24h x 0,08 (Equação 2)." />
-                <StatRow label="Acumulado 7 dias" value={fmt(s.precip7d?.media)} unit="mm" tooltip="Precipitação acumulada nos últimos 7 dias via endpoint I006. Limiar máximo: 150 mm. Fator: F_ch.7d = precip7d / 150 (Equação 3). Componente V_ch.7d = F_ch.7d x 0,12 (Equação 4)." />
-                <StatRow label="Acumulado 30 dias" value={fmt(s.precip30d?.media)} unit="mm" tooltip="Precipitação acumulada nos últimos 30 dias via endpoint I006. Limiar máximo: 300 mm. Fator: F_ch.30d = precip30d / 300 (Equação 5). Componente V_ch.30d = F_ch.30d x 0,10 (Equação 6)." />
-                <StatRow label="Precipitação atual (I175)" value={fmt(s.precipAtual?.media)} unit="mm" tooltip="Precipitação horária mais recente via endpoint I175 da API BNDMET. Fornece a leitura instantânea da estação D6594. Informativo — não entra diretamente na equação de risco." />
+                <StatRow label="Acumulado 24h" value={fmt(s.ultPrecip24h)} unit="mm" tooltip="Valor da leitura mais recente do período. Precipitação acumulada nas últimas 24h via endpoint I006 da API BNDMET. Limiar máximo: 50 mm. Componente: V_ch.24h = F_ch.24h × 0,08." />
+                <StatRow label="Acumulado 7 dias" value={fmt(s.ultPrecip7d)} unit="mm" tooltip="Valor da leitura mais recente do período. Precipitação acumulada nos últimos 7 dias via endpoint I006 da API BNDMET. Limiar máximo: 150 mm. Componente: V_ch.7d = F_ch.7d × 0,12." />
+                <StatRow label="Acumulado 30 dias" value={fmt(s.ultPrecip30d)} unit="mm" tooltip="Valor da leitura mais recente do período. Precipitação acumulada nos últimos 30 dias via endpoint I006 da API BNDMET. Limiar máximo: 300 mm. Componente: V_ch.30d = F_ch.30d × 0,10." />
+                <StatRow label="Precipitação atual (I175)" value={fmt(s.ultPrecipAtual)} unit="mm" tooltip="Precipitação horária mais recente via endpoint I175 da API BNDMET. Fornece a leitura instantânea da estação D6594. Informativo — não entra diretamente na equação de risco." />
               </div>
               <div>
                 <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>🌤 Condições e Previsão (OWM)</h4>
-                <StatRow label="Temperatura" value={fmt(s.temperatura?.media)} unit="°C" tooltip="Temperatura do ar no local monitorado (°C) retornada pelo endpoint /weather da API OpenWeatherMap. Informativa — não entra na equação de risco." />
-                <StatRow label="Umidade externa" value={fmt(s.umidadeExterna?.media)} unit="%" tooltip="Umidade relativa do ar (%) retornada pelo endpoint /weather da API OpenWeatherMap. Informativa — não entra na equação de risco." />
-                <StatRow label="Pressão atm. (grnd_level)" value={fmt(s.pressao?.media)} unit="hPa" tooltip="Pressão ao nível do solo (hPa) — campo grnd_level do endpoint /weather da API OpenWeatherMap. Mais preciso que a pressão ao nível do mar para localidades com altitude significativa. Usado no cálculo de V_pressão (peso 0,05): quedas ≥ 5 hPa em 3h entre leituras consecutivas indicam instabilidade atmosférica antecipatória de chuva." />
-                <StatRow label="Velocidade do vento" value={fmt(s.vento?.media)} unit="m/s" tooltip="Velocidade do vento (m/s) retornada pelo endpoint /weather da API OpenWeatherMap. Informativa — não entra na equação de risco." />
-                <StatRow label="Chuva atual (rain.1h)" value={fmt(s.chuvaAtualOwm?.media)} unit="mm/h" tooltip="Representa a precipitação na próxima hora em mm/h — campo rain.1h do endpoint /weather da API OpenWeatherMap. Campo ausente na resposta quando não há chuva no período. Informativo — não entra na equação de risco." />
-                <StatRow label="Previsão 24h (/forecast)" value={fmt(s.chuvaFutura24h?.media)} unit="mm" tooltip="Total previsto para as próximas 24h - soma dos 8 blocos de 3h do endpoint /forecast (parâmetro cnt=8) da API OpenWeatherMap, campo rain.3h. Classificado conforme Tabela 7 (AlertaRio, adaptado para a estação D6594). Componente: V_ch.fut = F_ch.fut × 0,15 (Equação 7)." />
+                <StatRow label="Temperatura" value={fmt(s.ultTemperatura)} unit="°C" tooltip="Temperatura do ar no local monitorado (°C) retornada pelo endpoint /weather da API OpenWeatherMap. Informativa — não entra na equação de risco." />
+                <StatRow label="Umidade externa" value={fmt(s.ultUmidadeExt)} unit="%" tooltip="Umidade relativa do ar (%) retornada pelo endpoint /weather da API OpenWeatherMap. Informativa — não entra na equação de risco." />
+                <StatRow label="Pressão atm. (grnd_level)" value={fmt(s.ultPressao)} unit="hPa" tooltip="Pressão ao nível do solo (hPa) — campo grnd_level do endpoint /weather da API OpenWeatherMap. Mais preciso que a pressão ao nível do mar para localidades com altitude significativa. Usado no cálculo de V_pressão (peso 0,05): quedas ≥ 5 hPa em 3h entre leituras consecutivas indicam instabilidade atmosférica antecipatória de chuva." />
+                <StatRow label="Velocidade do vento" value={fmt(s.ultVento)} unit="m/s" tooltip="Velocidade do vento (m/s) retornada pelo endpoint /weather da API OpenWeatherMap. Informativa — não entra na equação de risco." />
+                <StatRow label="Chuva atual (rain.1h)" value={fmt(s.ultChuvaAtualOwm)} unit="mm/h" tooltip="Representa a precipitação na próxima hora em mm/h — campo rain.1h do endpoint /weather da API OpenWeatherMap. Campo ausente na resposta quando não há chuva no período. Informativo — não entra na equação de risco." />
+                <StatRow label="Previsão 24h (/forecast)" value={fmt(s.ultChuvaFutura)} unit="mm" tooltip="Total previsto para as próximas 24h - soma dos 8 blocos de 3h do endpoint /forecast (parâmetro cnt=8) da API OpenWeatherMap, campo rain.3h. Classificado conforme Tabela 7 (AlertaRio, adaptado para a estação D6594). Componente: V_ch.fut = F_ch.fut × 0,15 (Equação 7)." />
               </div>
             </div>
 
@@ -1006,20 +1025,35 @@ export default function ReportsContent() {
                                 <div>
                                   <p style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--primary-blue)', margin: '0 0 0.5rem 0' }}>⚙️ Componentes Equação 5</p>
                                   <div style={{ fontSize: '0.75rem' }}>
-                                    {[
-                                      ['V_lençol (×0,40)', d.vLencol],
-                                      ['V_ch.24h (×0,08)', d.vChuvaAtual],
-                                      ['V_ch.7d (×0,12)', d.vChuvaHistorica],
-                                      ['V_ch.30d (×0,10)', d.vChuvaMensal],
-                                      ['V_ch.futura (×0,15)', d.vChuvaFutura],
-                                      ['V_taxa (×0,10)', d.vTaxaVariacao],
-                                      ['V_pressão (×0,05)', d.vPressao],
-                                    ].map(([lbl, val]) => (
-                                      <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderBottom: '1px solid #dbeafe' }}>
-                                        <span style={{ color: 'var(--gray-600)' }}>{lbl}</span>
-                                        <span style={{ fontWeight: '700', color: 'var(--primary-blue)' }}>{fmtV(val)}</span>
-                                      </div>
-                                    ))}
+                                    {(() => {
+                                      const n3 = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+                                      const n2 = (v, d2 = 2) => parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: d2, maximumFractionDigits: d2 });
+                                      const pFut  = parseFloat(d.chuvaFutura24h || 0);
+                                      const fFut  = pFut >= 80 ? 1.00 : pFut >= 50 ? 0.75 : pFut >= 25 ? 0.50 : pFut >= 5 ? 0.25 : 0.00;
+                                      const intens = d.intensidadePrevisao || (pFut >= 80 ? 'Pancada' : pFut >= 50 ? 'Muito Forte' : pFut >= 25 ? 'Forte' : pFut >= 5 ? 'Moderada' : 'Fraca');
+                                      const taxa  = parseFloat(d.taxaVariacaoUmidade || 0);
+                                      const deltaP = (parseFloat(d.vPressao || 0) / 0.05) * 5;
+                                      const rows = [
+                                        { lbl: 'V_lençol (×0,40)',   calc: `min(${n2(d.umidadeSolo)}% / 25%, 1) × 0,40`,      val: d.vLencol },
+                                        { lbl: 'V_ch.24h (×0,08)',   calc: `min(${n2(d.precipitacao24h)} / 50, 1) × 0,08`,     val: d.vChuvaAtual },
+                                        { lbl: 'V_ch.7d (×0,12)',    calc: `min(${n2(d.precipitacao7d)} / 150, 1) × 0,12`,     val: d.vChuvaHistorica },
+                                        { lbl: 'V_ch.30d (×0,10)',   calc: `min(${n2(d.precipitacao30d)} / 300, 1) × 0,10`,    val: d.vChuvaMensal },
+                                        { lbl: 'V_ch.futura (×0,15)',calc: `${n2(fFut, 2)} (${intens}) × 0,15`,                val: d.vChuvaFutura },
+                                        { lbl: 'V_taxa (×0,10)',     calc: `|${n2(taxa * 100, 2)}%| / 100 × 0,10`,             val: d.vTaxaVariacao },
+                                        { lbl: 'V_pressão (×0,05)', calc: `${n2(deltaP, 2)} hPa / 5 × 0,05`,                  val: d.vPressao },
+                                      ];
+                                      return rows.map(({ lbl, calc, val }) => (
+                                        <div key={lbl} style={{ padding: '0.28rem 0', borderBottom: '1px solid #dbeafe' }}>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                                            <span style={{ color: 'var(--gray-600)', fontWeight: '600' }}>{lbl}</span>
+                                            <span style={{ fontWeight: '700', color: 'var(--primary-blue)', fontFamily: 'monospace' }}>{n3(val)}</span>
+                                          </div>
+                                          <div style={{ color: '#94a3b8', fontSize: '0.68rem', fontFamily: 'monospace', marginTop: '0.08rem' }}>
+                                            = {calc} = {n3(val)}
+                                          </div>
+                                        </div>
+                                      ));
+                                    })()}
                                     {/* Soma da Eq.5 */}
                                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', marginTop: '0.125rem', borderTop: '1px dashed #93c5fd' }}>
                                       <span style={{ color: 'var(--gray-500)', fontSize: '0.7rem' }}>Σ Eq.5 (sem override)</span>

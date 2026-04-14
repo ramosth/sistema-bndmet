@@ -631,25 +631,54 @@ export default function SensorsContent() {
                                     {isRuptura && <span style={{ marginLeft: '0.375rem', fontSize: '0.65rem', color: '#991b1b', backgroundColor: '#fee2e2', padding: '0.1rem 0.35rem', borderRadius: '0.2rem' }}>override ativo</span>}
                                   </p>
                                   <div style={{ fontSize: '0.72rem' }}>
-                                    {vx.map(({ label, value }) => (
-                                      <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', borderBottom: '1px solid #dbeafe' }}>
-                                        <span style={{ color: '#6b7280' }}>{label}</span>
-                                        <span style={{ fontWeight: '700', color: '#1d4ed8', fontFamily: 'monospace' }}>
-                                          {value != null ? parseFloat(value).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '—'}
-                                        </span>
-                                      </div>
-                                    ))}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderTop: '2px solid #bfdbfe', marginTop: '0.125rem' }}>
-                                      <span style={{ fontWeight: '700', color: '#374151' }}>Σ FR {isRuptura ? '(sem override)' : ''}</span>
-                                      <span style={{ fontWeight: '700', color: isRuptura ? '#d97706' : riscoColor(item), fontFamily: 'monospace' }}>
-                                        {(frSoma * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
-                                      </span>
-                                    </div>
-                                    {isRuptura && (
-                                      <div style={{ marginTop: '0.25rem', fontSize: '0.68rem', color: '#991b1b', backgroundColor: '#fef2f2', padding: '0.3rem', borderRadius: '0.2rem' }}>
-                                        Umidade {item.umidadeSolo}% ≥ 30% → <code>acionarRuptura()</code>
-                                      </div>
-                                    )}
+                                    {(() => {
+                                      const n3 = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+                                      const n2 = (v, d2=2) => parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: d2, maximumFractionDigits: d2 });
+
+                                      const pFut  = parseFloat(item.chuvaFutura24h || 0);
+                                      const fFut  = pFut >= 80 ? 1.00 : pFut >= 50 ? 0.75 : pFut >= 25 ? 0.50 : pFut >= 5 ? 0.25 : 0.00;
+                                      const intens = item.intensidadePrevisao || (pFut >= 80 ? 'Pancada' : pFut >= 50 ? 'Muito Forte' : pFut >= 25 ? 'Forte' : pFut >= 5 ? 'Moderada' : 'Fraca');
+                                      const taxa  = parseFloat(item.taxaVariacaoUmidade || 0);
+                                      const vPressVal = parseFloat(item.vPressao || 0);
+                                      const deltaP = (vPressVal / 0.05) * 5;
+
+                                      const rows = [
+                                        { label: 'V_lençol (×0,40)',  calc: `min(${n2(item.umidadeSolo)}% / 25%, 1) × 0,40`, value: item.vLencol },
+                                        { label: 'V_ch.24h (×0,08)',  calc: `min(${n2(item.precipitacao24h)} / 50, 1) × 0,08`, value: item.vChuvaAtual },
+                                        { label: 'V_ch.7d (×0,12)',   calc: `min(${n2(item.precipitacao7d)} / 150, 1) × 0,12`, value: item.vChuvaHistorica },
+                                        { label: 'V_ch.30d (×0,10)',  calc: `min(${n2(item.precipitacao30d)} / 300, 1) × 0,10`, value: item.vChuvaMensal },
+                                        { label: 'V_ch.fut (×0,15)',  calc: `${n2(fFut, 2)} (${intens}) × 0,15`, value: item.vChuvaFutura },
+                                        { label: 'V_taxa (×0,10)',    calc: `|${n2(taxa * 100, 2)}%| / 100 × 0,10`, value: item.vTaxaVariacao },
+                                        { label: 'V_pressão (×0,05)', calc: `${n2(deltaP, 2)} hPa / 5 × 0,05`, value: item.vPressao },
+                                      ];
+
+                                      return (
+                                        <>
+                                          {rows.map(({ label, calc, value }) => (
+                                            <div key={label} style={{ padding: '0.25rem 0', borderBottom: '1px solid #dbeafe' }}>
+                                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                                                <span style={{ color: '#6b7280', fontWeight: '600' }}>{label}</span>
+                                                <span style={{ fontWeight: '700', color: '#1d4ed8', fontFamily: 'monospace' }}>{n3(value)}</span>
+                                              </div>
+                                              <div style={{ color: '#94a3b8', fontSize: '0.65rem', fontFamily: 'monospace', marginTop: '0.05rem' }}>
+                                                = {calc} = {n3(value)}
+                                              </div>
+                                            </div>
+                                          ))}
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', borderTop: '2px solid #bfdbfe', marginTop: '0.125rem' }}>
+                                            <span style={{ fontWeight: '700', color: '#374151' }}>Σ FR {isRuptura ? '(sem override)' : ''}</span>
+                                            <span style={{ fontWeight: '700', color: isRuptura ? '#d97706' : riscoColor(item), fontFamily: 'monospace' }}>
+                                              {(frSoma * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
+                                            </span>
+                                          </div>
+                                          {isRuptura && (
+                                            <div style={{ marginTop: '0.25rem', fontSize: '0.68rem', color: '#991b1b', backgroundColor: '#fef2f2', padding: '0.3rem', borderRadius: '0.2rem' }}>
+                                              Umidade {item.umidadeSolo}% ≥ 30% → <code>acionarRuptura()</code>
+                                            </div>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
                                   </div>
                                 </div>
 
